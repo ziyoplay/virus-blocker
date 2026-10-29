@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/header"
+        style="@style/TermText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/statusLine"
+        style="@style/TermText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingVertical="6dp"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <FrameLayout
+        android:id="@+id/frame"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="8dp"
+        android:layout_weight="1">
+
+        <ScrollView
+            android:id="@+id/scroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbarThumbVertical="@color/green_dim">
+
+            <TextView
+                android:id="@+id/log"
+                style="@style/TermText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingMultiplier="1.1"
+                android:padding="8dp"
+                android:textSize="11sp" />
+        </ScrollView>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/progress"
+        style="@style/TermText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/btnDelete"
+        style="@style/MenuButton"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginTop="0dp"
+        android:background="@drawable/btn_danger"
+        android:gravity="center"
+        android:textColor="@color/red"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/btnMenu"
+        style="@style/MenuButton"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center"
+        android:text="[ &lt; MENYUGA QAYTISH ]"
+        android:visibility="gone" />
+</LinearLayout>

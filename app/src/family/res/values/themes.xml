@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.App" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorPrimary">@color/primary</item>
+        <item name="android:colorAccent">@color/primary</item>
+        <item name="android:alertDialogTheme">@style/Dialog.App</item>
+    </style>
+
+    <style name="Dialog.App" parent="android:Theme.Material.Light.Dialog.Alert">
+        <item name="android:colorAccent">@color/primary</item>
+    </style>
+
+    <style name="BigButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">60dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingHorizontal">20dp</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:background">@drawable/btn_primary</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <style name="SecondaryButton" parent="BigButton">
+        <item name="android:minHeight">54dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:background">@drawable/btn_secondary</item>
+    </style>
+</resources>

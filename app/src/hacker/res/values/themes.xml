@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.App" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:colorAccent">@color/green</item>
+        <item name="android:colorPrimary">@color/green_dim</item>
+        <item name="android:alertDialogTheme">@style/Dialog.Terminal</item>
+    </style>
+
+    <style name="Dialog.Terminal" parent="android:Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">@color/green</item>
+        <item name="android:colorBackground">@color/bg_term</item>
+        <item name="android:textColorPrimary">@color/green</item>
+        <item name="android:textColor">@color/green</item>
+        <item name="android:fontFamily">monospace</item>
+    </style>
+
+    <style name="TermText">
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textColor">@color/green</item>
+    </style>
+
+    <style name="MenuButton" parent="TermText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:padding">15dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:background">@drawable/btn_terminal</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+</resources>

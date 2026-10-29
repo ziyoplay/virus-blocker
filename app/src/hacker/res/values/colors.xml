@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#FF000000</color>
+    <color name="bg_term">#FF020A04</color>
+    <color name="green">#FF00FF41</color>
+    <color name="green_dim">#FF0A8F2E</color>
+    <color name="green_dark">#FF003B12</color>
+    <color name="red">#FFFF2B2B</color>
+    <color name="red_dark">#FF3B0000</color>
+    <color name="gray">#FF4F5F55</color>
+</resources>
