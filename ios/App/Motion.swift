@@ -153,6 +153,93 @@ extension View {
     }
 }
 
+/// Bosh menyu orqasidagi "matrix yomg'iri" (hacker versiyasi): yashil belgilar ustun-ustun pastga oqadi.
+/// Xira, 30 kadr/s, "Harakatni kamaytirish" yoqilgan bo'lsa — to'xtaydi. Android'dagi MatrixRainView bilan bir xil.
+struct MatrixRain: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var model = RainModel()
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
+            Canvas { g, size in
+                model.step(to: timeline.date, size: size)
+                model.draw(in: &g)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+final class RainModel {
+    private struct Drop {
+        var row: Double
+        var speed: Double
+        var length: Int
+    }
+
+    private static let glyphs = Array("01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789ABCDEF<>/#$%&*+=:")
+    private let font = Font.system(size: 14, design: .monospaced)
+    private let columnWidth: CGFloat = 17.5
+    private var rowHeight: CGFloat = 16.8
+    private var measured = false
+    private var size: CGSize = .zero
+    private var rows = 0
+    private var drops: [Drop] = []
+    /// Har ustun uchun belgilar to'ri — vaqti-vaqti bilan bittasi almashib, "tirik" ko'rinadi.
+    private var grid: [[Character]] = []
+    private var last: Date?
+
+    private func newDrop(start: Bool) -> Drop {
+        Drop(
+            row: start ? Double.random(in: 0 ..< Double(max(rows, 1))) : -Double(Int.random(in: 4 ..< 30)),
+            speed: Double.random(in: 5 ..< 14),
+            length: Int.random(in: 8 ..< 22)
+        )
+    }
+
+    func step(to date: Date, size: CGSize) {
+        if size != self.size {
+            self.size = size
+            rows = Int(size.height / rowHeight) + 2
+            let columns = max(1, Int(size.width / columnWidth))
+            grid = (0 ..< columns).map { _ in (0 ..< rows).map { _ in Self.glyphs.randomElement()! } }
+            drops = (0 ..< columns).map { _ in newDrop(start: true) }
+        }
+        let dt = last.map { min(0.1, date.timeIntervalSince($0)) } ?? 0
+        last = date
+        for c in drops.indices {
+            drops[c].row += drops[c].speed * dt
+            if drops[c].row - Double(drops[c].length) > Double(rows) { drops[c] = newDrop(start: false) }
+            if Int.random(in: 0 ..< 12) == 0 { grid[c][Int.random(in: 0 ..< rows)] = Self.glyphs.randomElement()! }
+        }
+    }
+
+    func draw(in g: inout GraphicsContext) {
+        if !measured {
+            // Ko'p qatorli matnning haqiqiy qator balandligi — ustundagi belgilar to'rga to'g'ri tushsin.
+            rowHeight = g.resolve(Text("0\n0").font(font)).measure(in: CGSize(width: 100, height: 1000)).height / 2
+            measured = true
+        }
+        let trailStyle = LinearGradient(colors: [Theme.neon.opacity(0), Theme.neon.opacity(0.37)], startPoint: .top, endPoint: .bottom)
+        let headColor = Color(red: 0.78, green: 1, blue: 0.83).opacity(0.6)
+        for c in drops.indices {
+            let head = Int(drops[c].row.rounded(.down))
+            let x = CGFloat(c) * columnWidth + columnWidth / 2
+            // Iz: bitta ko'p qatorli matn, yuqoriga qarab so'nadi (har belgini alohida chizishdan ancha yengil)
+            let top = max(0, head - drops[c].length + 1)
+            let trailEnd = min(head - 1, rows - 1)
+            if top <= trailEnd {
+                let trail = (top ... trailEnd).map { String(grid[c][$0]) }.joined(separator: "\n")
+                g.draw(Text(trail).font(font).foregroundStyle(trailStyle), at: CGPoint(x: x, y: CGFloat(trailEnd + 1) * rowHeight), anchor: .bottom)
+            }
+            if head >= 0, head < rows {
+                g.draw(Text(String(grid[c][head])).font(font).foregroundColor(headColor), at: CGPoint(x: x, y: CGFloat(head + 1) * rowHeight), anchor: .bottom)
+            }
+        }
+    }
+}
+
 /// Hacker versiyasining kirish animatsiyasi (Android'dagi bilan bir xil vaqt chizig'i): CRT chiziqlari,
 /// neon qalqon chiziladi, skaner chizig'i uni to'ldiradi, belgi, so'ng sarlavha tasodifiy belgilardan "ochiladi".
 struct TerminalIntroView: View {

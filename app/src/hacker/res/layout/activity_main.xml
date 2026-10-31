@@ -1,110 +1,121 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
-    android:fillViewport="true">
+    android:background="@color/bg">
 
-    <LinearLayout
+    <!-- Orqa fondagi "matrix yomg'iri" -->
+    <uz.apkqoriqchi.MatrixRainView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="18dp">
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no" />
 
-        <TextView
-            android:id="@+id/prompt"
-            style="@style/TermText"
+    <ScrollView
+        android:id="@+id/root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/green_dim"
-            android:textSize="12sp" />
+            android:orientation="vertical"
+            android:padding="18dp">
 
-        <TextView
-            style="@style/TermText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:lineSpacingMultiplier="0.9"
-            android:text=" ▄▀█ █▀█ █▄▀\n █▀█ █▀▀ █░█"
-            android:textSize="30sp" />
+            <TextView
+                android:id="@+id/prompt"
+                style="@style/TermText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/green_dim"
+                android:textSize="12sp" />
 
-        <TextView
-            style="@style/TermText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:letterSpacing="0.25"
-            android:shadowColor="@color/green"
-            android:shadowRadius="12"
-            android:text="QO\'RIQCHI"
-            android:textSize="30sp"
-            android:textStyle="bold" />
+            <TextView
+                style="@style/TermText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:lineSpacingMultiplier="0.9"
+                android:text=" ▄▀█ █▀█ █▄▀\n █▀█ █▀▀ █░█"
+                android:textSize="30sp" />
 
-        <TextView
-            android:id="@+id/subtitle"
-            style="@style/TermText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="@color/green_dim"
-            android:textSize="12sp" />
+            <TextView
+                style="@style/TermText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.25"
+                android:shadowColor="@color/green"
+                android:shadowRadius="12"
+                android:text="QO\'RIQCHI"
+                android:textSize="30sp"
+                android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/status"
-            style="@style/TermText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:background="@drawable/btn_terminal"
-            android:padding="12dp"
-            android:textSize="12sp" />
+            <TextView
+                android:id="@+id/subtitle"
+                style="@style/TermText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/green_dim"
+                android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/btnFull"
-            style="@style/MenuButton"
-            android:layout_marginTop="22dp"
-            android:text="[1] &gt; TO\'LIQ SKANERLASH" />
+            <TextView
+                android:id="@+id/status"
+                style="@style/TermText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/btn_terminal"
+                android:padding="12dp"
+                android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/btnApps"
-            style="@style/MenuButton"
-            android:text="[2] &gt; ILOVALARNI TEKSHIRISH" />
+            <TextView
+                android:id="@+id/btnFull"
+                style="@style/MenuButton"
+                android:layout_marginTop="22dp"
+                android:text="[1] &gt; TO\'LIQ SKANERLASH" />
 
-        <TextView
-            android:id="@+id/btnFiles"
-            style="@style/MenuButton"
-            android:text="[3] &gt; APK FAYLLARNI TEKSHIRISH" />
+            <TextView
+                android:id="@+id/btnApps"
+                style="@style/MenuButton"
+                android:text="[2] &gt; ILOVALARNI TEKSHIRISH" />
 
-        <TextView
-            android:id="@+id/btnGuard"
-            style="@style/MenuButton" />
+            <TextView
+                android:id="@+id/btnFiles"
+                style="@style/MenuButton"
+                android:text="[3] &gt; APK FAYLLARNI TEKSHIRISH" />
 
-        <TextView
-            android:id="@+id/btnWeb"
-            style="@style/MenuButton" />
+            <TextView
+                android:id="@+id/btnGuard"
+                style="@style/MenuButton" />
 
-        <TextView
-            android:id="@+id/btnAbout"
-            style="@style/MenuButton"
-            android:text="[6] &gt; DASTUR HAQIDA" />
+            <TextView
+                android:id="@+id/btnWeb"
+                style="@style/MenuButton" />
 
-        <TextView
-            android:id="@+id/btnExit"
-            style="@style/MenuButton"
-            android:text="[0] &gt; CHIQISH"
-            android:textColor="@color/green_dim" />
+            <TextView
+                android:id="@+id/btnAbout"
+                style="@style/MenuButton"
+                android:text="[6] &gt; DASTUR HAQIDA" />
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:minHeight="20dp" />
+            <TextView
+                android:id="@+id/btnExit"
+                style="@style/MenuButton"
+                android:text="[0] &gt; CHIQISH"
+                android:textColor="@color/green_dim" />
 
-        <TextView
-            android:id="@+id/cursor"
-            style="@style/TermText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="13sp" />
-    </LinearLayout>
-</ScrollView>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="20dp" />
+
+            <TextView
+                android:id="@+id/cursor"
+                style="@style/TermText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

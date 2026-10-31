@@ -36,7 +36,13 @@ struct ProtectionView: View {
                 }
                 .padding()
             }
-            .background(Theme.background)
+            .background {
+                ZStack {
+                    Theme.background
+                    if Flavor.hacker { MatrixRain() }
+                }
+                .ignoresSafeArea()
+            }
             .navigationTitle(Voice.protectionTitle)
             .task { await refreshSafari() }
             .onChange(of: phase) { p in
