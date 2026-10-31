@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ApplicationInfo
 import android.content.pm.ServiceInfo
 import android.database.ContentObserver
 import android.net.Uri
@@ -26,8 +27,9 @@ import android.util.Log
 import java.io.File
 
 /**
- * Real-time himoya: yangi o'rnatilgan ilovalarni va Telegram/WhatsApp/Download papkalariga
- * kelgan fayllarni darhol tekshiradi. Matnlar har bir versiyaning [Voice] obyektidan olinadi.
+ * Real-time himoya: har bir yangi o'rnatilgan ilovani qattiq rejimda tekshirib, natijani oynada
+ * ko'rsatadi; Telegram/WhatsApp/Download papkalariga kelgan fayllarni tekshiradi, aniq virusni o'chiradi.
+ * Matnlar har bir versiyaning [Voice] obyektidan olinadi.
  */
 class GuardService : Service() {
 
@@ -40,15 +42,8 @@ class GuardService : Service() {
         private const val REFRESH_MS = 5 * 60_000L
         private const val TAG = "Qoriqchi"
 
-        /** Kuzatiladigan papkalar (tashqi xotira ildiziga nisbatan) — ular va bevosita ichki papkalari. */
-        private val WATCH_BASES = listOf(
-            "Download",
-            "Telegram",
-            "Android/media/org.telegram.messenger/Telegram",
-            "Android/media/org.telegram.messenger.web/Telegram",
-            "Android/media/com.whatsapp/WhatsApp/Media",
-            "Bluetooth",
-        )
+        /** Fayl uchun bu belgilar xato bo'lmaydi — so'ramasdan o'chiriladi. */
+        private val AUTO_FILE_TAGS = setOf(Tag.SIGNATURE, Tag.EICAR, Tag.DOUBLE_EXT, Tag.FAKE_FILE, Tag.EVASION)
 
         fun start(ctx: Context) {
             try {
@@ -75,8 +70,14 @@ class GuardService : Service() {
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             val pkg = i.data?.schemeSpecificPart ?: return
+            if (i.action == Intent.ACTION_PACKAGE_FULLY_REMOVED) {
+                // "Qoldirilgan" ilova o'chirildi — shu nom bilan keyin kelgan boshqa ilova qayta tekshirilsin.
+                if (pkg in prefs.trusted) prefs.trusted = prefs.trusted - pkg
+                return
+            }
             // O'rnatish manbasi tizimda yozilib ulgurishi uchun biroz kutamiz.
-            bg.postDelayed({ checkPackage(pkg) }, 1500)
+            val replacing = i.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+            bg.postDelayed({ checkPackage(pkg, replacing) }, 1500)
         }
     }
 
@@ -104,7 +105,10 @@ class GuardService : Service() {
         bg = Handler(worker.looper)
         scanner = Scanner(this)
 
-        val filter = IntentFilter(Intent.ACTION_PACKAGE_ADDED).apply { addDataScheme("package") }
+        val filter = IntentFilter(Intent.ACTION_PACKAGE_ADDED).apply {
+            addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
+            addDataScheme("package")
+        }
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(packageReceiver, filter, RECEIVER_EXPORTED)
         else registerReceiver(packageReceiver, filter)
         bg.post(refresh)
@@ -134,7 +138,8 @@ class GuardService : Service() {
     private fun watchDirs(): Set<String> {
         val root = Environment.getExternalStorageDirectory()
         val out = mutableSetOf<String>()
-        for (base in WATCH_BASES.map { File(root, it) }.filter { it.isDirectory }) {
+        // Kuzatiladi: har bir asosiy papka va uning bevosita ichki papkalari.
+        for (base in Storage.WATCH_BASES.map { File(root, it) }.filter { it.isDirectory }) {
             out += base.absolutePath
             base.listFiles()?.filter { it.isDirectory && !it.name.startsWith(".") }?.forEach { out += it.absolutePath }
         }
@@ -251,14 +256,31 @@ class GuardService : Service() {
         }
     }
 
-    private fun checkPackage(pkg: String) {
-        val t = try {
-            scanner.analyzePackage(pkg)
+    /**
+     * Yangi ilova — qayerdan kelganidan qat'i nazar qattiq tekshiriladi va natija oynada ko'rsatiladi:
+     * log, risklar, xulosa va "Qoldirish / O'chirish". Messenjerdan kelgan aniq virus o'zi o'chiriladi.
+     * Yangilanish toza bo'lsa oyna chiqmaydi (Play har kuni o'nlab ilovani yangilaydi).
+     */
+    private fun checkPackage(pkg: String, replacing: Boolean) {
+        if (pkg == packageName) return
+        val ai = try {
+            packageManager.getApplicationInfo(pkg, 0)
         } catch (e: Exception) {
+            return
+        }
+        if (ai.flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0) return
+        val log = LogConsole()
+        val checker = Scanner(this, log)
+        val source = checker.sourceOf(ai)
+        val t = try {
+            checker.analyzePackage(pkg)
+        } catch (e: Exception) {
+            log.line("[!] tahlil xatosi: ${e.message}", Palette.YELLOW)
             null
         }
-        if (t != null && t.target !in prefs.trusted) alert(t)
-        else if (pkg != packageName) info(Voice.appCleanText(scanner.labelOf(pkg)))
+        if (replacing && (t == null || pkg in prefs.trusted)) return
+        val auto = t?.level == ThreatLevel.MALWARE && source == Scanner.Source.MESSENGER && AutoConfirm.isEnabled(this)
+        showCheck(pkg, checker.labelOf(pkg), t, log, auto)
     }
 
     // ───────────────────────── Bildirishnomalar ─────────────────────────
@@ -303,6 +325,59 @@ class GuardService : Service() {
             .build()
         nm.notify(id, n)
         prefs.openThreats = prefs.openThreats + 1
+        if (t.level == ThreatLevel.MALWARE) autoRemoveFile(t, id)
+    }
+
+    /** Aniq virus fayli (ma'lum imzo, yolg'on kengaytma, chalkashtirilgan APK) — so'ramasdan yo'q qilinadi. */
+    private fun autoRemoveFile(t: Threat, id: Int) {
+        if (t.tags.none { it in AUTO_FILE_TAGS } || !Remover.shredDelete(File(t.target))) return
+        prefs.totalRemoved = prefs.totalRemoved + 1
+        prefs.openThreats = (prefs.openThreats - 1).coerceAtLeast(0)
+        val text = Voice.autoRemovedText(t)
+        nm.notify(
+            id,
+            Notification.Builder(this, CH_ALERT)
+                .setSmallIcon(R.drawable.ic_notify)
+                .setContentTitle(Voice.autoRemovedTitle(t))
+                .setContentText(text)
+                .setStyle(Notification.BigTextStyle().bigText(text))
+                .setAutoCancel(true)
+                .setContentIntent(openApp())
+                .build(),
+        )
+    }
+
+    /**
+     * Yangi ilova oynasini ochadi (Accessibility yoqilgan bo'lsa fonda ham). Ochilmasa — bildirishnoma
+     * qoladi, uni bosib oynani ochish mumkin.
+     */
+    private fun showCheck(pkg: String, label: String, t: Threat?, log: LogConsole, auto: Boolean) {
+        val id = 1000 + (pkg.hashCode() and 0xFFFFF)
+        val check = CheckActivity.intent(this, pkg, label, t, log, id, auto)
+        val text = Voice.verdictText(label, t)
+        val b = Notification.Builder(this, if (t != null) CH_ALERT else CH_INFO)
+            .setSmallIcon(R.drawable.ic_notify)
+            .setContentTitle(Voice.checkTitle(label, t))
+            .setContentText(text)
+            .setStyle(Notification.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+            .setContentIntent(PendingIntent.getActivity(this, id, check, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+        if (t != null) {
+            val remove = ThreatActionActivity.removeIntent(this, pkg, label, id, Tag.SIGNATURE in t.tags, counted = true)
+            b.setColor(0xFFD64545.toInt()).addAction(
+                Notification.Action.Builder(
+                    Icon.createWithResource(this, R.drawable.ic_notify), Voice.REMOVE,
+                    PendingIntent.getActivity(this, id + 1, remove, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),
+                ).build(),
+            )
+            prefs.openThreats = prefs.openThreats + 1
+        }
+        nm.notify(id, b.build())
+        try {
+            startActivity(check)
+        } catch (e: Exception) {
+            Log.w(TAG, "tekshiruv oynasi ochilmadi", e)
+        }
     }
 
     private fun info(text: String) {

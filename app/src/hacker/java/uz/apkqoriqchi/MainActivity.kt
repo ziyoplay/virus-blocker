@@ -18,8 +18,10 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var prefs: Prefs
     private lateinit var btnGuard: TextView
+    private lateinit var btnWeb: TextView
     private lateinit var guardSetup: GuardSetup
     private var cursorOn = true
+    private var introPlaying = false
 
     private val blinkCursor = object : Runnable {
         override fun run() {
@@ -39,7 +41,6 @@ class MainActivity : Activity() {
         status = findViewById(R.id.status)
         findViewById<TextView>(R.id.prompt).text =
             "root@${Build.MODEL.lowercase().replace(' ', '-')}:~# ./qoriqchi --menu"
-        typewrite(findViewById(R.id.subtitle), "> anti-malware terminal v1.0 // Android himoyasi")
 
         findViewById<TextView>(R.id.btnFull).setOnClickListener { scan(ScanActivity.MODE_FULL) }
         findViewById<TextView>(R.id.btnApps).setOnClickListener { scan(ScanActivity.MODE_APPS) }
@@ -49,25 +50,71 @@ class MainActivity : Activity() {
 
         btnGuard = findViewById(R.id.btnGuard)
         btnGuard.setOnClickListener { toggleGuard() }
+        btnWeb = findViewById(R.id.btnWeb)
+        btnWeb.setOnClickListener { toggleWeb() }
         guardSetup = GuardSetup(
             this,
             GuardSetup.Texts(
                 storageTitle = "> fs.watch: ruxsat kerak",
                 storageMessage = "Telegram/WhatsApp/Download papkalariga tushgan APK'larni real vaqtda ushlash uchun \"Barcha fayllarga ruxsat\" kerak.\n\nRuxsatsiz faqat yangi o'rnatilgan ilovalar tekshiriladi.",
+                autoRemoveTitle = "> auto-purge: tugmasiz o'chirish",
+                autoRemoveMessage = "Android begona ilovani faqat \"O'chirilsinmi? → OK\" orqali o'chiradi. Avto-tasdiq yoqilsa, OK'ni Qo'riqchi o'zi bosadi: virus topildi → o'chirildi → qoldiqlari (o'rnatuvchi APK, yozgan fayllari) shred.\n\n" +
+                    "Keyingi oynada: Yuklab olingan ilovalar → \"APK Qo'riqchi: avto-o'chirish\" → YOQISH.\n\n" +
+                    "Tugma kulrang bo'lsa: Ilova haqida → ⋮ → \"Cheklangan sozlamalarga ruxsat\".",
                 autostartTitle = "> MIUI: avtozapusk",
                 autostartMessage = "MIUI fon xizmatlarini o'ldiradi. Himoya doim ishlashi uchun:\n\n1) Avtozapusk → APK Qo'riqchi → YOQISH\n2) Batareya → Cheklovsiz",
+                popupTitle = "> MIUI: fondan oyna ochish",
+                popupMessage = "MIUI fondagi ilovaga oyna ochishni taqiqlaydi — auto-purge ishlamay qoladi.\n\nKeyingi oynada: \"Fonda ishlayotganda qalqib chiquvchi oynalarni ko'rsatish\" → RUXSAT.",
                 ok = "SOZLASH",
                 later = "KEYINROQ",
             ),
         )
+
+        Motion.pressable(
+            findViewById(R.id.btnFull), findViewById(R.id.btnApps), findViewById(R.id.btnFiles),
+            btnGuard, btnWeb, findViewById(R.id.btnAbout), findViewById(R.id.btnExit),
+            scale = 0.97f,
+        )
+        val subtitle = findViewById<TextView>(R.id.subtitle)
+        val tagline = "> anti-malware terminal v1.0 // Android himoyasi"
+        if (savedInstanceState == null) {
+            val menu = Motion.items(findViewById(R.id.root))
+            Motion.hide(menu, dxDp = -24f)
+            introPlaying = Motion.enabled()
+            Motion.intro(
+                this,
+                IntroView.Style(
+                    bg = getColor(R.color.bg),
+                    accent = getColor(R.color.green),
+                    mark = Palette.BRIGHT,
+                    text = getColor(R.color.green),
+                    text2 = getColor(R.color.green_dim),
+                    title = "QO'RIQCHI",
+                    subtitle = "> himoya moduli yuklandi",
+                    terminal = true,
+                ),
+            ) {
+                Motion.stagger(menu, step = 45)
+                typewrite(subtitle, tagline)
+                if (introPlaying) {
+                    introPlaying = false
+                    guardSetup.onResume()
+                }
+            }
+        } else {
+            subtitle.text = tagline
+        }
     }
 
     override fun onResume() {
         super.onResume()
         renderStatus()
         renderGuard()
+        renderWeb()
         Realtime.resume(this)
-        guardSetup.onResume()
+        WebGuard.resume(this)
+        // Sozlash oynalari intro ustiga chiqmasin — ular intro tugagach ochiladi
+        if (!introPlaying) guardSetup.onResume()
         handler.post(blinkCursor)
     }
 
@@ -85,6 +132,52 @@ class MainActivity : Activity() {
             guardSetup.start()
         }
         renderGuard()
+        Motion.flash(btnGuard)
+    }
+
+    private fun renderWeb() {
+        val access = AutoConfirm.isEnabled(this)
+        btnWeb.text = "[5] > WEB HIMOYA: " + when {
+            !prefs.webGuard -> "[OFF]"
+            access -> "[ON]"
+            else -> "[!] ACCESSIBILITY KERAK"
+        }
+        btnWeb.setTextColor(
+            when {
+                !prefs.webGuard -> Palette.GRAY
+                access -> Palette.GREEN
+                else -> Palette.YELLOW
+            },
+        )
+    }
+
+    private fun toggleWeb() {
+        val access = AutoConfirm.isEnabled(this)
+        if (prefs.webGuard && access) {
+            WebGuard.disable(this)
+        } else {
+            WebGuard.enable(this)
+            if (!access) {
+                AlertDialog.Builder(this)
+                    .setTitle("> web-guard: accessibility kerak")
+                    .setMessage(
+                        "Brauzerdagi saytni tekshirish uchun Qo'riqchi manzil satrini o'qiydi (Chrome, Yandex, Samsung, Firefox, Opera, Edge, Telegram'dan ochilgan Chrome tab).\n\n" +
+                            "Keyingi oynada: Yuklab olingan ilovalar → \"APK Qo'riqchi: avto-o'chirish\" → YOQISH.\n\n" +
+                            "Baza (URLhaus + phishing ro'yxatlari) kuniga bir marta yuklanadi. Siz kirgan saytlar hech qayerga yuborilmaydi.",
+                    )
+                    .setPositiveButton("SOZLASH") { _, _ ->
+                        try {
+                            startActivity(AutoConfirm.settingsIntent())
+                        } catch (e: Exception) {
+                        }
+                    }
+                    .setNegativeButton("KEYINROQ", null)
+                    .show()
+            }
+        }
+        renderWeb()
+        renderStatus()
+        Motion.flash(btnWeb)
     }
 
     override fun onPause() {
@@ -100,6 +193,12 @@ class MainActivity : Activity() {
             append(if (open > 0) "[!] XAVF: $open ta tahdid qolgan\n" else "[✓] HIMOYA FAOL\n")
             append("    oxirgi skan : $when_\n")
             append("    yo'q qilindi: ${prefs.totalRemoved} ta tahdid")
+            if (prefs.webGuard) {
+                val (domains, updated) = WebDb.stats(this@MainActivity)
+                append("\n    web bloklar : ${prefs.sitesBlocked} ta sayt")
+                append("\n    web-baza    : ")
+                append(if (updated == 0L) "yuklanmoqda..." else "$domains domen · " + DateFormat.format("dd.MM HH:mm", Date(updated)))
+            }
         }
         status.setTextColor(if (open > 0) Palette.RED else Palette.GREEN)
         status.setBackgroundResource(if (open > 0) R.drawable.btn_danger else R.drawable.btn_terminal)
@@ -125,8 +224,11 @@ class MainActivity : Activity() {
                     "• \"Foto.apk\", \"hujjat.pdf.apk\" kabi aldamchi fayllar\n" +
                     "• Rasmiy do'kondan o'rnatilmagan ilovalar ruxsatlari\n" +
                     "• EICAR test-virus imzosi\n" +
+                    "• Deep: soxta ZIP yozuvlari, shifrlangan yuk, packer, Telegram-bot\n" +
+                    "• Real-time --strict: yangi ilova → tekshiruv → auto-purge + qoldiqlar\n" +
+                    "• Web: brauzerda phishing / virusli sayt → yopiladi (URLhaus + phishing bazasi, soxta Payme/Click/bank domenlari, punycode, IP, .apk)\n" +
                     "• ADB, root, ekran qulfi, xavfsizlik yangilanishi\n\n" +
-                    "Ball ≥ ${Rules.MALWARE_SCORE} → MALWARE, ≥ ${Rules.SUSPICIOUS_SCORE} → SHUBHALI.\n\n" +
+                    "Ball ≥ ${Rules.MALWARE_SCORE} → MALWARE, ≥ ${Rules.SUSPICIOUS_SCORE} → SHUBHALI (real-time: ≥ ${Rules.STRICT_SUSPICIOUS_SCORE}).\n\n" +
                     "Maslahat: Telegram'da kelgan APK fayllarni hech qachon o'rnatmang."
             )
             .setPositiveButton("OK", null)

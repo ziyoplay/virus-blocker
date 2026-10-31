@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tizimning "O'chirilsinmi?" oynasi va (web himoya yoqilsa) brauzer manzil satri; kuzatiladigan ilovalar xizmat ulanganda cheklanadi. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds|flagIncludeNotImportantViews"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/auto_confirm_desc"
+    android:notificationTimeout="100" />

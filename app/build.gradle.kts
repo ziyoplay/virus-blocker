@@ -19,8 +19,8 @@ android {
         applicationId = "uz.apkqoriqchi"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
     }
 
     signingConfigs {
@@ -63,6 +63,15 @@ android {
     lint {
         abortOnError = false
     }
+
+    // Unit testlar oddiy JVM'da: Android klasslari kerak bo'lmagan mantiq (sayt qoidalari, baza) tekshiriladi.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+}
+
+dependencies {
+    testImplementation("junit:junit:4.13.2")
 }
 
 kotlin {

@@ -196,6 +196,7 @@ class ScanActivity : Activity() {
             console.line("    $addr  $hex", Palette.GRAY, 45)
         }
         console.line("[+] Qoidalar: SMS-troyan, bank-troyan, soxta ilova, yashirin ikonka, EICAR", Palette.GREEN, 150)
+        console.line("[+] Deep: soxta ZIP yozuvlari, shifrlangan yuk, packer, Telegram-bot, C2 domenlar", Palette.GREEN, 150)
     }
 
     private fun summary(found: List<Threat>, s: Scanner, ms: Long) {
@@ -320,15 +321,24 @@ class ScanActivity : Activity() {
 
     private fun purgeApp(t: Threat): Boolean {
         val pkg = t.target
+        console.line("    [*] qoldiqlar qidirilmoqda (o'rnatuvchi APK, yozgan fayllari)...", Palette.GREEN_DIM, 100)
+        val leftovers = Remover.leftovers(this, pkg, Tag.SIGNATURE in t.tags)
+        console.line("    [+] qoldiq: ${leftovers.size} ta fayl", Palette.GREEN_DIM, 100)
         console.line("    [*] jarayon to'xtatilmoqda...", Palette.GREEN_DIM, 150)
         (getSystemService(ACTIVITY_SERVICE) as ActivityManager).killBackgroundProcesses(pkg)
         if (Scanner.isAdminActive(this, pkg)) {
             console.line("    [!] ilova qurilma administratori — tizim avval uni o'chirishni so'raydi", Palette.YELLOW, 200)
         }
+        if (AutoConfirm.isEnabled(this)) {
+            console.line("    [*] auto-confirm: tizim oynasi avtomatik tasdiqlanadi", Palette.GREEN_DIM, 150)
+        } else {
+            console.line("    [!] auto-confirm o'chiq — oynada OK bosing (yoqish: REAL-TIME HIMOYA)", Palette.YELLOW, 150)
+        }
         console.line("    [*] tizimga o'chirish so'rovi yuborildi...", Palette.GREEN_DIM, 250)
 
         val latch = CountDownLatch(1)
         uninstallLatch = latch
+        AutoConfirm.arm(pkg, t.name.substringBefore("  ["))
         runOnUiThread {
             try {
                 startActivityForResult(Remover.uninstallIntent(pkg), REQ_UNINSTALL)
@@ -338,10 +348,15 @@ class ScanActivity : Activity() {
         }
         latch.await()
         uninstallLatch = null
+        AutoConfirm.disarm()
         console.check()
         Thread.sleep(400)
         console.line("    [*] paket tekshirilmoqda...", Palette.GREEN_DIM, 150)
-        return !Remover.isInstalled(this, pkg)
+        if (Remover.isInstalled(this, pkg)) return false
+        val cleaned = Remover.cleanLeftovers(leftovers, pkg) { console.line("    [*] $it", Palette.GREEN_DIM, 60) }
+        console.line("    [+] /data/data/$pkg + kesh: tizim tomonidan o'chirildi", Palette.GREEN_DIM, 80)
+        console.line("    [+] qoldiqlar tozalandi: $cleaned ta", Palette.GREEN_DIM, 100)
+        return true
     }
 
     @Deprecated("Deprecated in Java")

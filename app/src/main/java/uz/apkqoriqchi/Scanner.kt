@@ -60,7 +60,7 @@ class Scanner(private val ctx: Context, private val con: Console = SilentConsole
         return found
     }
 
-    /** Real-time: bitta yangi o'rnatilgan ilovani tekshirish. */
+    /** Real-time: bitta yangi o'rnatilgan ilovani qattiq rejimda tekshirish. */
     fun analyzePackage(pkg: String): Threat? {
         if (pkg == ctx.packageName) return null
         val ai = try {
@@ -69,11 +69,11 @@ class Scanner(private val ctx: Context, private val con: Console = SilentConsole
             return null
         }
         if (ai.flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0) return null
-        return analyzeInstalled(ai, ai.loadLabel(pm).toString())
+        return analyzeInstalled(ai, ai.loadLabel(pm).toString(), strict = true)
     }
 
-    /** Real-time: bitta yangi kelgan faylni tekshirish. */
-    fun analyzeSingleFile(f: File): Threat? = analyzeFile(f, Environment.getExternalStorageDirectory())
+    /** Real-time: bitta yangi kelgan faylni qattiq rejimda tekshirish. */
+    fun analyzeSingleFile(f: File): Threat? = analyzeFile(f, Environment.getExternalStorageDirectory(), strict = true)
 
     fun labelOf(pkg: String): String = try {
         pm.getApplicationInfo(pkg, 0).loadLabel(pm).toString()
@@ -81,43 +81,118 @@ class Scanner(private val ctx: Context, private val con: Console = SilentConsole
         pkg
     }
 
+    /** Ilova qayerdan kelgan. */
+    enum class Source(val title: String) {
+        /** Play Market, boshqa rasmiy do'kon yoki telefon ishlab chiqaruvchisi. */
+        STORE("rasmiy do'kon"),
+        /** Kompyuterdan USB orqali (adb install). */
+        USB("kompyuterdan USB orqali (adb)"),
+        /** Qo'riqchi bilan bir xil kalit bilan imzolangan (hacker / oila versiyalari). */
+        OWN("Qo'riqchi kaliti bilan imzolangan"),
+        /** Telegram, WhatsApp va boshqa messenjerlardan kelgan APK. */
+        MESSENGER("messenjer"),
+        /** Brauzer (Google/Chrome), fayl menejeri va boshqalar. */
+        OTHER("brauzer / fayl menejeri");
+
+        /** Ruxsatlar risk sifatida ko'rsatiladi, lekin ball qo'shmaydi — aks holda har bir messenjer "shubhali" bo'lardi. */
+        val lenient get() = this == STORE || this == OWN
+    }
+
+    fun sourceOf(ai: ApplicationInfo): Source {
+        if (pm.checkSignatures(ctx.packageName, ai.packageName) == PackageManager.SIGNATURE_MATCH) return Source.OWN
+        val (installer, initiator) = installSource(ai.packageName)
+        if (isVendorPreload(ai, installer)) return Source.STORE
+        val who = sourceApp(installer, initiator)
+        return when {
+            who == null || who == SHELL -> Source.USB
+            who in Rules.TRUSTED_INSTALLERS -> Source.STORE
+            who in Rules.MESSENGERS -> Source.MESSENGER
+            else -> Source.OTHER
+        }
+    }
+
+    /**
+     * APK'ni kim bergan: tizim o'rnatuvchisi (packageinstaller) emas, uni ochgan ilova — Chrome, Telegram ...
+     * `adb install -i <paket>` bilan o'rnatuvchi qo'lda berilsa, o'sha hisoblanadi (sinov uchun).
+     */
+    private fun sourceApp(installer: String?, initiator: String?): String? =
+        installer?.takeIf { it != SHELL && "packageinstaller" !in it } ?: initiator ?: installer
+
+    /**
+     * Qattiq (real-time) rejimda har bir qadam [con] ga log sifatida yoziladi — u yangi ilova oynasida ko'rsatiladi.
+     * Oddiy skanerda do'kon ilovalari faqat imzolar bazasi bo'yicha tekshiriladi (tez bo'lishi uchun).
+     */
     @Suppress("DEPRECATION")
-    private fun analyzeInstalled(ai: ApplicationInfo, label: String): Threat? {
+    private fun analyzeInstalled(ai: ApplicationInfo, label: String, strict: Boolean = false): Threat? {
         val pkg = ai.packageName
+        if (pkg in Prefs(ctx).trusted) return null
+        val source = sourceOf(ai)
+        if (source.lenient && !strict) return Rules.verdict(ThreatKind.APP, pkg, label, listOfNotNull(Rules.signatureByPackage(pkg)))
+
+        val note = { text: String, color: Int -> if (strict) con.line(text, color) }
         val sigFlag = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
         val info = try {
             pm.getPackageInfo(pkg, PackageManager.GET_PERMISSIONS or PackageManager.GET_SERVICES or PackageManager.GET_RECEIVERS or sigFlag)
         } catch (e: Exception) {
+            note("[!] paket ma'lumotini o'qib bo'lmadi: ${e.message}", Palette.YELLOW)
             return null
         }
+        val (installer, initiator) = installSource(pkg)
+        val who = sourceApp(installer, initiator)
+        note("[*] paket  : $pkg  v${info.versionName}", Palette.GREEN)
+        note("[*] manba  : ${source.title}" + (who?.takeIf { it != SHELL }?.let { " ($it)" } ?: ""), Palette.GREEN)
 
+        // Ball qo'shadigan aniq dalillar — manbadan qat'i nazar.
         val findings = mutableListOf<Finding>()
         Rules.signatureByPackage(pkg)?.let { findings += it }
-
-        val (installer, initiator) = installSource(pkg)
-        val trusted = (installer != null && installer in Rules.TRUSTED_INSTALLERS) || isVendorPreload(ai, installer)
-
-        if (isDebugSigned(info)) findings += Finding(2, "Test (debug) kaliti bilan imzolangan", Tag.DEBUG)
-
-        // Rasmiy do'kondan kelgan ilovalarga ruxsatlar bo'yicha ball qo'yilmaydi — aks holda
-        // har bir messenjer "shubhali" bo'lib chiqadi.
-        if (!trusted) {
-            ai.sourceDir?.let { sha256(File(it)) }?.let { Rules.signatureByHash(it) }
-                ?.takeIf { findings.none { f -> f.tag == Tag.SIGNATURE } }?.let { findings += it }
-            findings += Finding(2, "Rasmiy do'kondan o'rnatilmagan" + sourceLabel(installer, initiator), Tag.SIDELOAD)
-            if (initiator != null && initiator in Rules.MESSENGERS) {
-                findings += Finding(1, "APK messenjer orqali yuborilgan", Tag.MESSENGER)
-            }
-            findings += Rules.permissionFindings(info)
-            findings += Rules.componentFindings(info)
-            if (pm.getLaunchIntentForPackage(pkg) == null) findings += Finding(2, "Ilova ikonkasi yashirilgan", Tag.HIDDEN)
-            if (isAccessibilityEnabled(pkg)) findings += Finding(3, "Accessibility hozir FAOL", Tag.ACCESSIBILITY)
-            if (isAdminActive(ctx, pkg)) findings += Finding(2, "Qurilma administratori hozir FAOL", Tag.ADMIN)
-            Rules.impersonation(label, pkg)?.let { findings += it }
-            Rules.fileLikeLabel(label)?.let { findings += it }
-            Rules.lureName(label)?.let { findings += it }
+        val apks = listOfNotNull(ai.sourceDir) + ai.splitSourceDirs.orEmpty()
+        note("[*] imzolar bazasi: ${apks.size} ta APK bo'lagi SHA-256 bo'yicha...", Palette.GREEN)
+        for (path in apks) {
+            val hash = sha256(File(path)) ?: continue
+            note("    ${File(path).name}  ${hash.take(16)}…", Palette.GRAY)
+            Rules.signatureByHash(hash)?.takeIf { findings.none { f -> f.tag == Tag.SIGNATURE } }?.let { findings += it }
         }
-        return Rules.verdict(ThreatKind.APP, pkg, label, findings)
+        note(if (findings.any { it.tag == Tag.SIGNATURE }) "[!!!] imzolar bazasida TOPILDI" else "[ OK ] imzolar bazasida yo'q", if (findings.isEmpty()) Palette.GREEN_DIM else Palette.RED)
+
+        // Evristik belgilar — ishonchli manbadan kelgan ilovada faqat risk sifatida ko'rsatiladi.
+        val risks = mutableListOf<Finding>()
+        if (isDebugSigned(info)) risks += Finding(2, "Test (debug) kaliti bilan imzolangan", Tag.DEBUG)
+        if (source != Source.STORE) risks += Finding(2, "Rasmiy do'kondan o'rnatilmagan" + sourceLabel(who), Tag.SIDELOAD)
+        if (source == Source.MESSENGER) risks += Finding(1, "APK messenjer orqali yuborilgan", Tag.MESSENGER)
+        note("[*] ruxsatlar: ${info.requestedPermissions?.size ?: 0} ta so'raydi", Palette.GREEN)
+        risks += Rules.permissionFindings(info)
+        note("[*] xizmatlar: ${info.services?.size ?: 0}, qabul qiluvchilar: ${info.receivers?.size ?: 0}", Palette.GREEN)
+        risks += Rules.componentFindings(info)
+        if (pm.getLaunchIntentForPackage(pkg) == null) risks += Finding(2, "Ilova ikonkasi yashirilgan", Tag.HIDDEN)
+        if (isAccessibilityEnabled(pkg)) risks += Finding(3, "Accessibility hozir FAOL", Tag.ACCESSIBILITY)
+        if (isAdminActive(ctx, pkg)) risks += Finding(2, "Qurilma administratori hozir FAOL", Tag.ADMIN)
+        Rules.impersonation(label, pkg)?.let { risks += it }
+        Rules.fileLikeLabel(label)?.let { risks += it }
+        Rules.lureName(label)?.let { risks += it }
+        ai.sourceDir?.let {
+            note("[*] chuqur tahlil: APK ichi ochilmoqda (${human(File(it).length())})...", Palette.GREEN)
+            risks += Deep.inspect(File(it))
+        }
+        findings += if (source.lenient) risks.map { Finding(0, it.text, it.tag, it.meta) } else risks
+
+        if (strict) {
+            con.line()
+            if (findings.isEmpty()) con.line("[ OK ] hech qanday risk topilmadi", Palette.GREEN)
+            else con.line("── RISKLAR ──", Palette.CYAN)
+            for (f in findings.sortedByDescending { it.points }) {
+                val color = when {
+                    f.points == 0 -> Palette.GRAY
+                    f.points >= 3 -> Palette.RED
+                    else -> Palette.YELLOW
+                }
+                con.line("[+${f.points}] ${f.text}", color)
+            }
+            if (source.lenient && risks.isNotEmpty()) con.line("    (${source.title}: bu risklarga ball qo'shilmaydi)", Palette.GRAY)
+        }
+        val t = Rules.verdict(ThreatKind.APP, pkg, label, findings, suspiciousAt(strict))
+        val score = findings.sumOf { it.points }
+        note("[=] jami ball: $score  (shubhali ≥ ${suspiciousAt(strict)}, virus ≥ ${Rules.MALWARE_SCORE})", if (t == null) Palette.GREEN else Palette.RED)
+        return t
     }
 
     private fun installSource(pkg: String): Pair<String?, String?> = try {
@@ -143,9 +218,10 @@ class Scanner(private val ctx: Context, private val con: Console = SilentConsole
         return dir.parent == "/data/app" && !dir.name.startsWith(ai.packageName) && !dir.name.startsWith("~~")
     }
 
-    private fun sourceLabel(installer: String?, initiator: String?): String {
-        val who = initiator ?: installer ?: return " (adb / noma'lum)"
+    private fun sourceLabel(who: String?): String {
+        if (who == null) return " (noma'lum)"
         return when {
+            who == SHELL -> " (USB / adb)"
             who.contains("telegram") || who.contains("challegram") -> " (Telegram'dan)"
             who.contains("packageinstaller") -> " (APK fayldan)"
             else -> " ($who)"
@@ -223,7 +299,9 @@ class Scanner(private val ctx: Context, private val con: Console = SilentConsole
         return found
     }
 
-    private fun analyzeFile(f: File, root: File): Threat? {
+    private fun suspiciousAt(strict: Boolean) = if (strict) Rules.STRICT_SUSPICIOUS_SCORE else Rules.SUSPICIOUS_SCORE
+
+    private fun analyzeFile(f: File, root: File, strict: Boolean = false): Threat? {
         con.check()
         val len = f.length()
         if (len in 68..512 && isEicar(f)) {
@@ -249,6 +327,7 @@ class Scanner(private val ctx: Context, private val con: Console = SilentConsole
         if (f.absolutePath.contains("telegram", ignoreCase = true)) {
             findings += Finding(1, "Telegram orqali yuklab olingan", Tag.MESSENGER)
         }
+        findings += Deep.inspect(f)
 
         var name = f.name
         @Suppress("DEPRECATION")
@@ -273,54 +352,9 @@ class Scanner(private val ctx: Context, private val con: Console = SilentConsole
             Rules.fileLikeLabel(label)?.let { findings += it }
             (Rules.lureName(label) ?: Rules.lureName(f.name))?.let { findings += it }
         }
-        val t = Rules.verdict(ThreatKind.FILE, f.absolutePath, name, findings)
+        val t = Rules.verdict(ThreatKind.FILE, f.absolutePath, name, findings, suspiciousAt(strict))
         if (t == null) con.line("   └─ [ OK ] xavf past", Palette.GRAY, 20)
         return t
-    }
-
-    /**
-     * ZIP sarlavhasi ("PK\u0003\u0004") va ichida AndroidManifest.xml + classes.dex nomlari bo'lsa — bu APK.
-     * Zararli APK'lar ZIP tuzilmasini ataylab buzadi (ZipFile ochmaydi, Android o'rnatuvchisi esa ochadi),
-     * shuning uchun nomlarni fayl boshidagi va oxiridagi (markaziy katalog) baytlardan to'g'ridan-to'g'ri qidiramiz.
-     */
-    private fun isApkInside(f: File): Boolean {
-        val len = f.length()
-        if (len < 4096) return false
-        return try {
-            RandomAccessFile(f, "r").use { raf ->
-                val magic = ByteArray(4)
-                raf.readFully(magic)
-                if (magic[0] != 0x50.toByte() || magic[1] != 0x4B.toByte() || magic[2] != 3.toByte() || magic[3] != 4.toByte()) {
-                    return false
-                }
-                val head = ByteArray(minOf(len, 64L * 1024).toInt())
-                raf.seek(0)
-                raf.readFully(head)
-                val tailSize = minOf(len, 2L * 1024 * 1024).toInt()
-                val tail = ByteArray(tailSize)
-                raf.seek(len - tailSize)
-                raf.readFully(tail)
-                val text = String(head, Charsets.ISO_8859_1) + String(tail, Charsets.ISO_8859_1)
-                text.contains("AndroidManifest.xml") && text.contains("classes.dex")
-            }
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun sha256(f: File): String? = try {
-        val md = MessageDigest.getInstance("SHA-256")
-        f.inputStream().use { input ->
-            val buf = ByteArray(64 * 1024)
-            while (true) {
-                val n = input.read(buf)
-                if (n < 0) break
-                md.update(buf, 0, n)
-            }
-        }
-        md.digest().joinToString("") { "%02x".format(it) }
-    } catch (e: Exception) {
-        null
     }
 
     private fun isEicar(f: File): Boolean = try {
@@ -392,11 +426,57 @@ class Scanner(private val ctx: Context, private val con: Console = SilentConsole
     companion object {
         private const val MAX_DEPTH = 8
         private const val MAX_FILES = 60_000
+        private const val SHELL = "com.android.shell"
 
         fun human(bytes: Long): String = when {
             bytes >= 1 shl 20 -> String.format(Locale.US, "%.1f MB", bytes / 1048576.0)
             bytes >= 1 shl 10 -> "${bytes / 1024} KB"
             else -> "$bytes B"
+        }
+
+        /**
+         * ZIP sarlavhasi ("PK\u0003\u0004") va ichida AndroidManifest.xml + classes.dex nomlari bo'lsa — bu APK.
+         * Zararli APK'lar ZIP tuzilmasini ataylab buzadi (ZipFile ochmaydi, Android o'rnatuvchisi esa ochadi),
+         * shuning uchun nomlarni fayl boshidagi va oxiridagi (markaziy katalog) baytlardan to'g'ridan-to'g'ri qidiramiz.
+         */
+        fun isApkInside(f: File): Boolean {
+            val len = f.length()
+            if (len < 4096) return false
+            return try {
+                RandomAccessFile(f, "r").use { raf ->
+                    val magic = ByteArray(4)
+                    raf.readFully(magic)
+                    if (magic[0] != 0x50.toByte() || magic[1] != 0x4B.toByte() || magic[2] != 3.toByte() || magic[3] != 4.toByte()) {
+                        return false
+                    }
+                    val head = ByteArray(minOf(len, 64L * 1024).toInt())
+                    raf.seek(0)
+                    raf.readFully(head)
+                    val tailSize = minOf(len, 2L * 1024 * 1024).toInt()
+                    val tail = ByteArray(tailSize)
+                    raf.seek(len - tailSize)
+                    raf.readFully(tail)
+                    val text = String(head, Charsets.ISO_8859_1) + String(tail, Charsets.ISO_8859_1)
+                    text.contains("AndroidManifest.xml") && text.contains("classes.dex")
+                }
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        fun sha256(f: File): String? = try {
+            val md = MessageDigest.getInstance("SHA-256")
+            f.inputStream().use { input ->
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    md.update(buf, 0, n)
+                }
+            }
+            md.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            null
         }
 
         fun isAdminActive(ctx: Context, pkg: String): Boolean {

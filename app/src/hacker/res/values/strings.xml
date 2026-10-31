@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">APK Qo\'riqchi</string>
+    <string name="auto_confirm_label">APK Qo\'riqchi: avto-o\'chirish</string>
+    <string name="auto_confirm_desc">Virus topilganda tizimning \"O\'chirilsinmi?\" oynasidagi OK tugmasini o\'zi bosadi — virus siz tegmasdan o\'chadi. Web himoya yoqilsa, brauzerning manzil satrini o\'qib, phishing va virusli saytlarni yopadi. Bundan boshqa hech narsa o\'qilmaydi: xabarlar, parollar va boshqa ilovalar ko\'rinmaydi, saytlar hech qayerga yuborilmaydi.</string>
 </resources>

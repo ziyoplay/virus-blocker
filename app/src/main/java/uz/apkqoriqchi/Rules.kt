@@ -6,7 +6,7 @@ enum class ThreatKind { APP, FILE }
 
 enum class ThreatLevel { MALWARE, SUSPICIOUS }
 
-enum class Tag { SIGNATURE, BANKER, DROPPER, INSTALLER, FAKE_FILE, VPN, SMS, ACCESSIBILITY, ADMIN, NOTIF, HIDDEN, SIDELOAD, MESSENGER, DEBUG, FAKE, LURE, DOUBLE_EXT, APK, BROKEN, EICAR, PERM }
+enum class Tag { SIGNATURE, BANKER, DROPPER, INSTALLER, FAKE_FILE, VPN, SMS, ACCESSIBILITY, ADMIN, NOTIF, HIDDEN, SIDELOAD, MESSENGER, DEBUG, FAKE, LURE, DOUBLE_EXT, APK, BROKEN, EICAR, PERM, EVASION, PAYLOAD, PACKER, EXFIL, DYNAMIC, C2 }
 
 class Finding(val points: Int, val text: String, val tag: Tag, val meta: String? = null)
 
@@ -29,6 +29,9 @@ object Rules {
 
     const val MALWARE_SCORE = 8
     const val SUSPICIOUS_SCORE = 5
+
+    /** Yangi o'rnatilgan ilova / yangi kelgan fayl uchun qattiqroq chegara. */
+    const val STRICT_SUSPICIOUS_SCORE = 4
 
     /**
      * Imzolar bazasi: o'zimiz tahlil qilib, zararli ekani tasdiqlangan namunalar.
@@ -165,30 +168,41 @@ object Rules {
     fun doubleExtension(fileName: String): Finding? =
         if (DOUBLE_EXT.matches(fileName.lowercase())) Finding(4, "Yashirin kengaytma: $fileName", Tag.DOUBLE_EXT) else null
 
-    fun verdict(kind: ThreatKind, target: String, name: String, findings: List<Finding>): Threat? {
-        if (findings.isEmpty()) return null
-        val score = findings.sumOf { it.points }
-        val tags = findings.map { it.tag }.toSet()
+    fun verdict(
+        kind: ThreatKind,
+        target: String,
+        name: String,
+        findings: List<Finding>,
+        suspiciousAt: Int = SUSPICIOUS_SCORE,
+    ): Threat? {
+        // 0 ballik topilmalar faqat risk sifatida ko'rsatiladi (ishonchli manba) — hukmga ta'sir qilmaydi.
+        val scored = findings.filter { it.points > 0 }
+        if (scored.isEmpty()) return null
+        val score = scored.sumOf { it.points }
+        val tags = scored.map { it.tag }.toSet()
         val banker = Tag.SMS in tags &&
-            (Tag.ACCESSIBILITY in tags || Tag.HIDDEN in tags || Tag.ADMIN in tags || Tag.NOTIF in tags)
+            (Tag.ACCESSIBILITY in tags || Tag.HIDDEN in tags || Tag.ADMIN in tags || Tag.NOTIF in tags || Tag.EXFIL in tags)
 
-        // O'zini rasm/hujjat qilib ko'rsatib, yana boshqa APK o'rnatmoqchi — klassik yuklovchi troyan.
-        val dropper = Tag.INSTALLER in tags && (Tag.FAKE_FILE in tags || Tag.DOUBLE_EXT in tags || Tag.LURE in tags)
+        // O'zini rasm/hujjat qilib ko'rsatib yoki ichida yashirin yuk olib, yana boshqa APK o'rnatmoqchi — klassik yuklovchi troyan.
+        val dropper = Tag.INSTALLER in tags &&
+            (Tag.FAKE_FILE in tags || Tag.DOUBLE_EXT in tags || Tag.LURE in tags || Tag.PAYLOAD in tags)
 
         val level = when {
             Tag.SIGNATURE in tags || Tag.EICAR in tags || banker || dropper || score >= MALWARE_SCORE -> ThreatLevel.MALWARE
-            score >= SUSPICIOUS_SCORE -> ThreatLevel.SUSPICIOUS
+            score >= suspiciousAt -> ThreatLevel.SUSPICIOUS
             else -> return null
         }
 
-        val fakeBrand = findings.firstOrNull { it.tag == Tag.FAKE }?.meta
-        val signature = findings.firstOrNull { it.tag == Tag.SIGNATURE }?.meta
+        val fakeBrand = scored.firstOrNull { it.tag == Tag.FAKE }?.meta
+        val signature = scored.firstOrNull { it.tag == Tag.SIGNATURE }?.meta
         val family = when {
             signature != null -> signature
             Tag.EICAR in tags -> "EICAR-Test-File"
             banker -> "Android.Trojan.Banker.SmsStealer"
             dropper -> "Android.Trojan.Dropper"
             fakeBrand != null -> "Android.Trojan.Fake" + fakeBrand.replaceFirstChar { it.uppercase() }.replace(" ", "")
+            Tag.EXFIL in tags -> "Android.Spy.TelegramBot"
+            Tag.PAYLOAD in tags || Tag.EVASION in tags -> "Android.Trojan.Dropper.Packed"
             Tag.ACCESSIBILITY in tags -> "Android.Spy.AccessibilityAbuse"
             Tag.SMS in tags -> "Android.Trojan.SmsSpy"
             Tag.ADMIN in tags -> "Android.Locker.DeviceAdmin"
@@ -205,7 +219,7 @@ object Rules {
             family = family,
             level = level,
             score = score,
-            reasons = findings.sortedByDescending { it.points }.map { "${it.text} (+${it.points})" },
+            reasons = scored.sortedByDescending { it.points }.map { "${it.text} (+${it.points})" },
             tags = tags + listOfNotNull(if (banker) Tag.BANKER else null, if (dropper) Tag.DROPPER else null),
             brand = fakeBrand,
         )

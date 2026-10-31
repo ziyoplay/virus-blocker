@@ -64,6 +64,7 @@ class ScanActivity : Activity() {
     private val pending = ArrayDeque<Threat>()
     private var current: Threat? = null
     private var removedCount = 0
+    private var leftovers: List<File> = emptyList()
 
     private val console = object : Console {
         override fun line(text: String, color: Int, pause: Long) = check()
@@ -340,7 +341,11 @@ class ScanActivity : Activity() {
             if (files > 0) "$files ta fayl" else null,
         ).joinToString(" va ")
         val msg = "$what o'chiriladi." +
-            if (apps > 0) "\n\nHar bir ilova uchun telefon \"O'chirilsinmi?\" deb so'raydi — \"OK\" tugmasini bosing." else ""
+            when {
+                apps == 0 -> ""
+                AutoConfirm.isEnabled(this) -> "\n\nIlovalar o'zi o'chadi, ulardan qolgan fayllar ham tozalanadi. Hech narsa bosishingiz shart emas."
+                else -> "\n\nHar bir ilova uchun telefon \"O'chirilsinmi?\" deb so'raydi — \"OK\" tugmasini bosing."
+            }
         AlertDialog.Builder(this)
             .setTitle("Hammasini o'chirish")
             .setMessage(msg)
@@ -377,10 +382,18 @@ class ScanActivity : Activity() {
             return
         }
         (getSystemService(ACTIVITY_SERVICE) as ActivityManager).killBackgroundProcesses(t.target)
-        try {
-            startActivityForResult(Remover.uninstallIntent(t.target), REQ_UNINSTALL)
-        } catch (e: Exception) {
-            finishItem(t, false)
+        thread {
+            // Ilova o'chgach, u yozgan fayllarning egasi unutiladi — shuning uchun qoldiqlarni oldindan yig'amiz.
+            val found = Remover.leftovers(this, t.target, Tag.SIGNATURE in t.tags)
+            runOnUiThread {
+                leftovers = found
+                AutoConfirm.arm(t.target, t.name.substringBefore("  ["))
+                try {
+                    startActivityForResult(Remover.uninstallIntent(t.target), REQ_UNINSTALL)
+                } catch (e: Exception) {
+                    finishItem(t, false)
+                }
+            }
         }
     }
 
@@ -388,8 +401,15 @@ class ScanActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != REQ_UNINSTALL) return
+        AutoConfirm.disarm()
         val t = current ?: return
-        handler.postDelayed({ finishItem(t, !Remover.isInstalled(this, t.target)) }, 400)
+        handler.postDelayed({
+            if (Remover.isInstalled(this, t.target)) return@postDelayed finishItem(t, false)
+            thread {
+                Remover.cleanLeftovers(leftovers, t.target)
+                runOnUiThread { finishItem(t, true) }
+            }
+        }, 400)
     }
 
     private fun finishItem(t: Threat, ok: Boolean) {

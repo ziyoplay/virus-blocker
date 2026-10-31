@@ -15,6 +15,9 @@ object Explain {
         val out = mutableListOf<String>()
         if (Tag.SIGNATURE in tags) out += "Bu aniq ma'lum virus — Telegram orqali odamlarni aldash uchun tarqatilgan."
         if (Tag.DROPPER in tags) out += "Bu yashirin yuklovchi: o'rnatsangiz, telefonga boshqa, yanada xavfli virusni tushiradi."
+        if (Tag.EXFIL in tags) out += "Telefoningizdagi ma'lumotlarni firibgarlarning Telegram-botiga jo'natadi."
+        if (Tag.PAYLOAD in tags && Tag.DROPPER !in tags) out += "Ichida boshqa, yashirib qo'yilgan dastur bor."
+        if (Tag.EVASION in tags) out += "Antivirusdan yashirinish uchun ichki tuzilishi atayin chalkashtirilgan."
         if (Tag.FAKE_FILE in tags) out += "Rasm yoki hujjatga o'xshab ko'rinadi, aslida esa bu ilova."
         if (Tag.BANKER in tags) out += "SMS-kodlaringizni o'g'irlab, bank kartangizdan pul yechishga urinishi mumkin."
         if (Tag.FAKE in tags) out += "O'zini \"${t.brand?.replaceFirstChar { it.uppercase() }}\" qilib ko'rsatadi, lekin bu haqiqiy ilova emas."
@@ -23,6 +26,8 @@ object Explain {
         if (Tag.ADMIN in tags) out += "O'zini o'chirib bo'lmaydigan qilib qo'yishga urinadi."
         if (Tag.HIDDEN in tags) out += "Ikonkasini yashirib, sezdirmasdan ishlaydi."
         if (Tag.VPN in tags) out += "Internetdagi ma'lumotlaringizni o'z serveri orqali o'tkazishi mumkin."
+        if (Tag.C2 in tags) out += "Shubhali internet manziliga ulanadi."
+        if (Tag.PACKER in tags || Tag.DYNAMIC in tags) out += "Ichidagi kodini yashiradi — nima qilishini oldindan bilib bo'lmaydi."
         if (Tag.DOUBLE_EXT in tags && Tag.FAKE_FILE !in tags) out += "Rasm yoki hujjatga o'xshaydi, aslida esa ilova o'rnatuvchi fayl."
         if (Tag.LURE in tags) out += "Nomi sizni ochishga undash uchun atayin qiziqarli qilib qo'yilgan."
         if (Tag.MESSENGER in tags) out += "Telegram yoki boshqa messenjer orqali yuborilgan."

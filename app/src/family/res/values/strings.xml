@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Telefon Qo\'riqchi</string>
+    <string name="auto_confirm_label">Telefon Qo\'riqchi: avtomatik o\'chirish</string>
+    <string name="auto_confirm_desc">Xavfli ilova topilganda uni o\'zi o\'chiradi — sizdan hech qanday tugma bosish talab qilinmaydi. Xavfli saytlardan himoya yoqilsa, brauzerda ochilgan sayt manzilini tekshirib, firibgar saytlarni yopadi. Qo\'riqchi faqat o\'chirish oynasini va sayt manzilini ko\'radi — xabarlaringiz, parollaringiz va boshqa ilovalar o\'qilmaydi.</string>
 </resources>

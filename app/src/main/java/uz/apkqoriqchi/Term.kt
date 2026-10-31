@@ -37,6 +37,20 @@ object SilentConsole : Console {
     override fun check() {}
 }
 
+/** Qatorlarni yig'ib boradi — real-time tekshiruv logini yangi ilova oynasida ko'rsatish uchun. */
+class LogConsole : Console {
+    val texts = ArrayList<String>()
+    val colors = ArrayList<Int>()
+
+    override fun line(text: String, color: Int, pause: Long) {
+        texts += text
+        colors += color
+    }
+
+    override fun progress(done: Int, total: Int) {}
+    override fun check() {}
+}
+
 object Art {
     val MALWARE = listOf(
         " █▀▄▀█ ▄▀█ █░░ █░█░█ ▄▀█ █▀█ █▀▀",
@@ -93,9 +107,26 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("realtime", false)
         set(v) = sp.edit().putBoolean("realtime", v).apply()
 
+    /** Brauzerda xavfli saytlardan himoya (foydalanuvchi o'zi yoqadi). */
+    var webGuard: Boolean
+        get() = sp.getBoolean("web_guard", false)
+        set(v) = sp.edit().putBoolean("web_guard", v).apply()
+
+    var sitesBlocked: Int
+        get() = sp.getInt("sites_blocked", 0)
+        set(v) = sp.edit().putInt("sites_blocked", v).apply()
+
     var autostartHintShown: Boolean
         get() = sp.getBoolean("autostart_hint", false)
         set(v) = sp.edit().putBoolean("autostart_hint", v).apply()
+
+    var autoRemoveOffered: Boolean
+        get() = sp.getBoolean("auto_remove_offered", false)
+        set(v) = sp.edit().putBoolean("auto_remove_offered", v).apply()
+
+    var popupHintShown: Boolean
+        get() = sp.getBoolean("popup_hint", false)
+        set(v) = sp.edit().putBoolean("popup_hint", v).apply()
 
     /** Foydalanuvchi "bilaman, qoldirish" degan paketlar / fayllar. */
     var trusted: Set<String>
