@@ -138,6 +138,28 @@ MIUI fondagi ilovalarni o'chirib qo'yadi. Himoya doim ishlashi uchun:
 
 Tahlil internetsiz Android emulyatorida o'tkazilgan.
 
+## iPhone versiyasi
+
+iOS boshqa ilovalarni ko'rish, skanerlash yoki o'chirishga hech bir ilovaga ruxsat bermaydi, iPhone APK ham o'rnatmaydi. Shuning uchun iPhone versiyasi antivirus emas — **firibgar saytlardan himoya va xavfsizlik tekshiruvi**:
+
+- **Safari bloklovchi** — Android'dagi xavfli saytlar bazasi (~140 ming domen; Safari bitta kengaytmada ~150 mingtagacha qoida oladi) va soxta Payme/Click/bank/Apple ID saytlari uchun qoidalar. Bunday sayt Safari'da umuman ochilmaydi.
+- **SMS filtri** — notanish raqamdan kelgan, firibgar havolali SMS "Junk" bo'limiga tushadi.
+- **Havolani tekshirish** — shubhali havolani nusxalab qo'yasiz, sababi bilan javob chiqadi.
+- **Xavfsizlik tekshiruvi** — iOS versiyasi, ekran paroli, jailbreak belgilari.
+
+Telegram'ning ichki brauzerini iOS tekshirishga ruxsat bermaydi: Telegram'da havolalarni Safari'da ochadigan qilib sozlang. Barcha ilovalardagi saytlarni bloklaydigan DNS-filtr uchun Apple pullik dasturchi akkaunti kerak — u hozircha yo'q.
+
+**O'rnatish (Mac'siz, Windows'dan):**
+
+1. [Actions](../../actions/workflows/ios.yml) → oxirgi muvaffaqiyatli yig'ish → `Qoriqchi-ipa` faylini yuklab oling.
+2. Kompyuterga [iTunes](https://www.apple.com/itunes/) (Microsoft Store'dagisi emas) va [Sideloadly](https://sideloadly.io/) ni o'rnating.
+3. iPhone'ni kabel bilan ulang, Sideloadly'ga IPA'ni tashlang va Apple ID'ingizni kiriting.
+4. iPhone'da: **Sozlamalar → Maxfiylik va xavfsizlik → Dasturchi rejimi** → yoqing (telefon qayta yonadi). So'ng **Sozlamalar → Umumiy → VPN va qurilmani boshqarish** → Apple ID'ingizga ishoning.
+
+Bepul Apple ID bilan ilova 7 kun ishlaydi, keyin Sideloadly orqali qayta o'rnatiladi.
+
+Kod: `ios/` — umumiy mantiq `ios/Core` (Swift paket, testlari `swift test` bilan), ilova SwiftUI'da, Xcode loyihasi `ios/project.yml`dan [XcodeGen](https://github.com/yonaskolb/XcodeGen) bilan yaratiladi.
+
 ## O'zingiz yig'ish
 
 Kerak bo'ladi: JDK 17 va Android SDK (compileSdk 36).

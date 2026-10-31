@@ -1,0 +1,14 @@
+# XcodeGen yaratadigan fayllar (project.yml'dan)
+Qoriqchi.xcodeproj/
+App/Info.plist
+App/App.entitlements
+ContentBlocker/Info.plist
+ContentBlocker/ContentBlocker.entitlements
+MessageFilter/Info.plist
+MessageFilter/MessageFilter.entitlements
+
+build/
+Payload/
+*.ipa
+Core/.build/
+Core/.swiftpm/

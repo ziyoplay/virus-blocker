@@ -1,0 +1,85 @@
+# Xcode loyihasi shu fayldan yaratiladi: `xcodegen generate` (Mac'da yoki GitHub Actions'da).
+name: Qoriqchi
+options:
+  bundleIdPrefix: uz.apkqoriqchi
+  deploymentTarget:
+    iOS: "16.0"
+
+packages:
+  QoriqchiCore:
+    path: Core
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"
+
+targets:
+  Qoriqchi:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: QoriqchiCore
+      - target: ContentBlocker
+      - target: MessageFilter
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: "Qo'riqchi"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [uz.apkqoriqchi.ios.refresh]
+    entitlements:
+      path: App/App.entitlements
+      properties:
+        com.apple.security.application-groups: [group.uz.apkqoriqchi.ios]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.apkqoriqchi.ios
+    scheme: {}
+
+  ContentBlocker:
+    type: app-extension
+    platform: iOS
+    sources: [ContentBlocker]
+    dependencies:
+      - package: QoriqchiCore
+    info:
+      path: ContentBlocker/Info.plist
+      properties:
+        CFBundleDisplayName: "Qo'riqchi"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.Safari.content-blocker
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ContentBlockerRequestHandler
+    entitlements:
+      path: ContentBlocker/ContentBlocker.entitlements
+      properties:
+        com.apple.security.application-groups: [group.uz.apkqoriqchi.ios]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.apkqoriqchi.ios.ContentBlocker
+
+  MessageFilter:
+    type: app-extension
+    platform: iOS
+    sources: [MessageFilter]
+    dependencies:
+      - package: QoriqchiCore
+    info:
+      path: MessageFilter/Info.plist
+      properties:
+        CFBundleDisplayName: "Qo'riqchi"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.identitylookup.message-filter
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).MessageFilterExtension
+    entitlements:
+      path: MessageFilter/MessageFilter.entitlements
+      properties:
+        com.apple.security.application-groups: [group.uz.apkqoriqchi.ios]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.apkqoriqchi.ios.MessageFilter

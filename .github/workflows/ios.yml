@@ -1,0 +1,47 @@
+name: iOS
+
+on:
+  push:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Umumiy mantiq testlari (qoidalar, baza)
+        run: swift test --package-path ios/Core
+
+      - name: Xcode loyihasini yaratish
+        run: |
+          brew install xcodegen ldid
+          cd ios && xcodegen generate
+
+      - name: Yig'ish (imzosiz)
+        run: |
+          cd ios
+          xcodebuild -project Qoriqchi.xcodeproj -scheme Qoriqchi -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+
+      # Sideloadly / AltStore IPA'ni o'z Apple ID'ingiz bilan qayta imzolaydi. Entitlements (App Group)
+      # yo'qolmasligi uchun ularni ldid bilan oldindan yozib qo'yamiz.
+      - name: IPA
+        run: |
+          cd ios
+          rm -rf Payload && mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/Qoriqchi.app Payload/
+          APP=Payload/Qoriqchi.app
+          ldid -SContentBlocker/ContentBlocker.entitlements "$APP/PlugIns/ContentBlocker.appex/ContentBlocker"
+          ldid -SMessageFilter/MessageFilter.entitlements "$APP/PlugIns/MessageFilter.appex/MessageFilter"
+          ldid -SApp/App.entitlements "$APP/Qoriqchi"
+          zip -qry Qoriqchi.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Qoriqchi-ipa
+          path: ios/Qoriqchi.ipa
