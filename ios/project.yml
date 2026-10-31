@@ -21,7 +21,6 @@ settings:
     # Versiya (CI'da buyruq qatoridan almashtiriladi): oila — standart, hacker — HACKER belgisi bilan
     BASE_BUNDLE_ID: uz.apkqoriqchi.ios.family
     APP_DISPLAY_NAME: "Qo'riqchi"
-    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon-Family
 
 targets:
   Qoriqchi:
@@ -49,6 +48,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(BASE_BUNDLE_ID)
+        # Ilova darajasida bo'lishi shart: XcodeGen bu yerga "AppIcon" yozadi. Hacker uchun CI almashtiradi.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon-Family
     scheme: {}
 
   ContentBlocker:
