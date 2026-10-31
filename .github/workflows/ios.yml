@@ -27,23 +27,27 @@ jobs:
           brew install xcodegen
           cd ios && xcodegen generate
 
-      - name: Yig'ish (imzosiz)
-        run: |
-          cd ios
-          xcodebuild -project Qoriqchi.xcodeproj -scheme Qoriqchi -configuration Release \
-            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
-
+      # Ikki versiya, Android'dagi kabi: hacker (qora terminal) va oila (sokin, oddiy til).
       # Imzosiz IPA: Impactor / Sideloadly uni o'z Apple ID'ingiz bilan imzolaydi.
-      - name: IPA
+      - name: Yig'ish (imzosiz) va IPA
         run: |
           cd ios
-          rm -rf Payload && mkdir Payload
-          cp -R build/Build/Products/Release-iphoneos/Qoriqchi.app Payload/
-          ls -la Payload/Qoriqchi.app/PlugIns/*/ | grep -E "blockerList|\.bin"
-          zip -qry Qoriqchi.ipa Payload
+          build_flavor() {
+            local flavor=$1; shift
+            xcodebuild -project Qoriqchi.xcodeproj -scheme Qoriqchi -configuration Release \
+              -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "build-$flavor" \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" "$@" build
+            rm -rf Payload && mkdir Payload
+            cp -R "build-$flavor/Build/Products/Release-iphoneos/Qoriqchi.app" Payload/
+            /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" -c "Print :CFBundleDisplayName" Payload/Qoriqchi.app/Info.plist
+            ls Payload/Qoriqchi.app/PlugIns/*/ | grep -E "blockerList|\.bin"
+            zip -qry "Qoriqchi-$flavor.ipa" Payload
+          }
+          build_flavor hacker BASE_BUNDLE_ID=uz.apkqoriqchi.ios "APP_DISPLAY_NAME=QO'RIQCHI" \
+            ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-Hacker SWIFT_ACTIVE_COMPILATION_CONDITIONS=HACKER
+          build_flavor family
 
       - uses: actions/upload-artifact@v4
         with:
           name: Qoriqchi-ipa
-          path: ios/Qoriqchi.ipa
+          path: ios/Qoriqchi-*.ipa

@@ -17,7 +17,7 @@ struct LinkCheckView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
-                    Card(icon: "link", tint: .blue, title: "Havolani qo'ying") {
+                    Card(icon: Flavor.hacker ? "terminal" : "link", tint: Theme.accent, title: Voice.pasteLink) {
                         VStack(spacing: 12) {
                             TextField("payme-bonus.top/login", text: $text)
                                 .textInputAutocapitalization(.never)
@@ -27,7 +27,12 @@ struct LinkCheckView: View {
                                 .focused($focused)
                                 .onSubmit(check)
                                 .padding(12)
-                                .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .background(Theme.field, in: RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
+                                .overlay {
+                                    if Flavor.hacker {
+                                        RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).stroke(Theme.neonDim, lineWidth: 1)
+                                    }
+                                }
                                 .foregroundStyle(.primary)
                             HStack {
                                 PasteButton(payloadType: String.self) { strings in
@@ -38,7 +43,7 @@ struct LinkCheckView: View {
                                 }
                                 .labelStyle(.titleAndIcon)
                                 Spacer()
-                                Button("Tekshirish", action: check)
+                                Button(Voice.check, action: check)
                                     .buttonStyle(.borderedProminent)
                                     .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
                             }
@@ -52,15 +57,15 @@ struct LinkCheckView: View {
                             .id(outcome)
                     }
 
-                    Card(icon: "lightbulb", tint: .yellow, title: "Esda tuting") {
+                    Card(icon: "lightbulb", tint: Theme.warn, title: Voice.remember) {
                         Text("Bank, Payme yoki Click hech qachon SMS yoki Telegram orqali havola yuborib, karta raqami va SMS-kodni so'ramaydi. Bunday xabar kelsa — havolani ochmang.")
                     }
                     .staggerIn(1)
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Havolani tekshirish")
+            .background(Theme.background)
+            .navigationTitle(Voice.linkTitle)
             .scrollDismissesKeyboard(.interactively)
         }
     }
@@ -69,17 +74,17 @@ struct LinkCheckView: View {
     private func result(_ outcome: Outcome) -> some View {
         switch outcome {
         case .invalid:
-            Card(icon: "questionmark.circle", tint: .secondary, title: "Bu havolaga o'xshamaydi") {
+            Card(icon: "questionmark.circle", tint: Theme.warn, title: Voice.invalid) {
                 Text("Sayt manzilini to'liq qo'ying, masalan: example.com/sahifa")
             }
         case let .clean(host):
-            Card(icon: "checkmark.shield.fill", tint: .green, title: "Xavf topilmadi") {
+            Card(icon: "checkmark.shield.fill", tint: Theme.ok, title: Voice.clean) {
                 Text("\"\(host)\" bazada yo'q va unda firibgarlik belgilari topilmadi. Baribir karta ma'lumotlarini faqat rasmiy ilovalarda kiriting.")
             }
         case let .danger(host, level, score, reasons):
             Card(icon: level == .malware ? "xmark.shield.fill" : "exclamationmark.shield.fill",
-                 tint: level == .malware ? .red : .orange,
-                 title: level == .malware ? "Xavfli sayt!" : "Shubhali sayt") {
+                 tint: level == .malware ? Theme.danger : Theme.warn,
+                 title: Voice.danger(level == .malware)) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("\"\(host)\" · xavf \(score)").font(.subheadline.bold()).foregroundStyle(.primary)
                     ForEach(reasons, id: \.self) { Text("• " + $0) }

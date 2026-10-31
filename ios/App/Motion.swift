@@ -137,6 +137,125 @@ struct Card<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .cardBackground()
+    }
+}
+
+extension View {
+    /// Karta foni: oila — yumaloq oq karta, hacker — qora terminal oynasi, yashil ramka.
+    func cardBackground() -> some View {
+        background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
+            .overlay {
+                if Flavor.hacker {
+                    RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).stroke(Theme.neonDim, lineWidth: 1)
+                }
+            }
+    }
+}
+
+/// Hacker versiyasining kirish animatsiyasi (Android'dagi bilan bir xil vaqt chizig'i): CRT chiziqlari,
+/// neon qalqon chiziladi, skaner chizig'i uni to'ldiradi, belgi, so'ng sarlavha tasodifiy belgilardan "ochiladi".
+struct TerminalIntroView: View {
+    var onDone: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var start = Date()
+    private let duration = 2.3
+    private static let glyphs = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@<>/")
+    private let title = "QO'RIQCHI"
+    private let subtitle = "> himoya moduli yuklandi"
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            let t = min(1, timeline.date.timeIntervalSince(start) / duration)
+            Canvas { g, size in draw(&g, size, t) }
+        }
+        .background(Color.black)
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture { onDone() }
+        .accessibilityLabel(title)
+        .task {
+            if reduceMotion {
+                onDone()
+                return
+            }
+            start = Date()
+            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+            onDone()
+        }
+    }
+
+    /// Umumiy vaqt chizig'ining [a, b] oralig'idagi ulushi (0..1).
+    private func seg(_ t: Double, _ a: Double, _ b: Double) -> Double { min(1, max(0, (t - a) / (b - a))) }
+    private func ease(_ p: Double) -> Double { 1 - pow(1 - p, 3) }
+
+    private func draw(_ g: inout GraphicsContext, _ size: CGSize, _ t: Double) {
+        let green = Theme.neon
+        // CRT chiziqlari
+        var y: CGFloat = 0
+        var lines = Path()
+        while y < size.height {
+            lines.move(to: CGPoint(x: 0, y: y))
+            lines.addLine(to: CGPoint(x: size.width, y: y))
+            y += 4
+        }
+        g.stroke(lines, with: .color(green.opacity(0.055)), lineWidth: 1)
+
+        let side = min(size.width, size.height) * 0.30
+        let rect = CGRect(x: size.width / 2 - side / 2, y: size.height * 0.40 - side / 2, width: side, height: side)
+        let unit = side / 24
+        let shield = ShieldShape().path(in: rect)
+
+        // Neon kontur: bir nechta qalin-shaffof qatlam = yorug'lik
+        let trace = shield.trimmedPath(from: 0, to: seg(t, 0, 0.30))
+        let layers: [(CGFloat, Double)] = [(2.6, 0.14), (1.4, 0.31), (0.6, 1.0)]
+        for (w, a) in layers {
+            g.stroke(trace, with: .color(green.opacity(a)), style: StrokeStyle(lineWidth: w * unit, lineCap: .round, lineJoin: .round))
+        }
+
+        // Skaner chizig'i qalqonni yuqoridan pastga to'ldiradi
+        let sweep = ease(seg(t, 0.28, 0.60))
+        if sweep > 0 {
+            let scanY = rect.minY + unit * (1 + 22 * CGFloat(sweep))
+            var clipped = g
+            clipped.clip(to: Path(CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: scanY - rect.minY)))
+            clipped.fill(shield, with: .color(green.opacity(0.18)))
+            if sweep < 1 {
+                var scan = Path()
+                scan.move(to: CGPoint(x: rect.minX - 4 * unit, y: scanY))
+                scan.addLine(to: CGPoint(x: rect.maxX + 4 * unit, y: scanY))
+                g.stroke(scan, with: .color(green.opacity(0.2)), lineWidth: 1.6 * unit)
+                g.stroke(scan, with: .color(green), lineWidth: 0.35 * unit)
+            }
+        }
+
+        let check = CheckShape().path(in: rect).trimmedPath(from: 0, to: ease(seg(t, 0.55, 0.70)))
+        g.stroke(check, with: .color(green.opacity(0.2)), style: StrokeStyle(lineWidth: 3.2 * unit, lineCap: .round, lineJoin: .round))
+        g.stroke(check, with: .color(Color(red: 0.78, green: 1, blue: 0.83)), style: StrokeStyle(lineWidth: 1.5 * unit, lineCap: .round, lineJoin: .round))
+
+        // Sarlavha chapdan o'ngga "dekodlanadi"
+        let solved = Int(seg(t, 0.50, 0.82) * Double(title.count))
+        let shown = String(title.enumerated().map { i, c in i < solved || c == " " ? c : Self.glyphs.randomElement()! })
+        let titleY = rect.maxY + 64
+        var text = g
+        text.opacity = ease(seg(t, 0.48, 0.56))
+        text.addFilter(.shadow(color: green, radius: 10))
+        text.draw(
+            Text(shown).font(.system(size: 30, weight: .bold, design: .monospaced)).kerning(7).foregroundColor(green),
+            at: CGPoint(x: size.width / 2, y: titleY)
+        )
+
+        let typed = seg(t, 0.74, 0.95)
+        if typed > 0 {
+            let cursor = Int(t * 12) % 2 == 0 ? "█" : " "
+            let line = String(subtitle.prefix(Int(typed * Double(subtitle.count)))) + cursor
+            // Monospace: to'liq uzunlikka to'ldirsak, yozilayotganda markazdan siljimaydi
+            let padded = line.padding(toLength: subtitle.count + 1, withPad: " ", startingAt: 0)
+            g.draw(
+                Text(padded).font(.system(size: 13, design: .monospaced)).foregroundColor(Theme.neonDim),
+                at: CGPoint(x: size.width / 2, y: titleY + 34)
+            )
+        }
     }
 }

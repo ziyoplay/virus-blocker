@@ -13,21 +13,21 @@ struct ProtectionView: View {
                 VStack(spacing: 14) {
                     status.staggerIn(0)
 
-                    Card(icon: "safari", tint: safariOn == true ? .green : .orange, title: safariOn == true ? "Safari himoyasi yoqilgan" : "1. Safari himoyasini yoqing") {
+                    Card(icon: "safari", tint: safariOn == true ? Theme.ok : Theme.warn, title: Voice.safari(safariOn == true)) {
                         if safariOn == true {
                             Text("Firibgar va virusli saytlar Safari'da ochilmaydi.")
                         } else {
-                            Text("Sozlamalar → Ilovalar → Safari → Kengaytmalar → Qo'riqchi → yoqing.\n(Settings → Apps → Safari → Extensions)")
+                            Text("Sozlamalar → Ilovalar → Safari → Kengaytmalar → \(appName) → yoqing.\n(Настройки → Приложения → Safari → Расширения)")
                         }
                     }
                     .staggerIn(1)
 
-                    Card(icon: "message.badge", tint: .blue, title: "2. SMS filtrini yoqing") {
-                        Text("Sozlamalar → Ilovalar → Xabarlar → Notanish va spam → SMS filtrlash → Qo'riqchi.\n(Settings → Apps → Messages → Unknown & Spam)\n\nNotanish raqamdan kelgan firibgar havolali SMS'lar \"Junk\" bo'limiga tushadi.")
+                    Card(icon: "message.badge", tint: Theme.accent, title: Voice.sms) {
+                        Text("Sozlamalar → Ilovalar → Xabarlar → Notanish va spam → SMS filtrlash → \(appName).\n(Настройки → Приложения → Сообщения → Неизвестные и спам)\n\nNotanish raqamdan kelgan firibgar havolali SMS'lar \"Junk\" bo'limiga tushadi.")
                     }
                     .staggerIn(2)
 
-                    Card(icon: "paperplane", tint: .blue, title: "3. Telegram havolalari") {
+                    Card(icon: "paperplane", tint: Theme.accent, title: Voice.telegram) {
                         Text("Telegram sozlamalarida havolalar ochiladigan brauzerni (Browser / Open links in) Safari qilib qo'ying. Shunda Telegram'dagi havolalar ham Safari himoyasidan o'tadi — Telegram'ning ichki brauzerini iOS tekshirishga ruxsat bermaydi.")
                     }
                     .staggerIn(3)
@@ -36,8 +36,8 @@ struct ProtectionView: View {
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Himoya")
+            .background(Theme.background)
+            .navigationTitle(Voice.protectionTitle)
             .task { await refreshSafari() }
             .onChange(of: phase) { p in
                 if p == .active { Task { await refreshSafari() } }
@@ -45,28 +45,35 @@ struct ProtectionView: View {
         }
     }
 
+    /// Sozlamalarda ko'rinadigan nom (versiyaga qarab "Qo'riqchi" yoki "QO'RIQCHI").
+    private var appName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Qo'riqchi"
+    }
+
     private var status: some View {
         let on = safariOn == true
         return VStack(spacing: 12) {
             Image(systemName: on ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
                 .font(.system(size: 64))
-                .foregroundStyle(on ? Color.green : Color.orange)
+                .foregroundStyle(on ? Theme.ok : Theme.warn)
                 .symbolRenderingMode(.hierarchical)
+                .shadow(color: Flavor.hacker ? Theme.neon.opacity(on ? 0.6 : 0) : .clear, radius: 14)
                 .breathing(on)
-            Text(on ? "iPhone himoyada" : "Himoya hali to'liq yoqilmagan")
+            Text(Voice.status(on))
                 .font(.title2.bold())
-            Text(on ? "Bazada \(updater.domains.formatted()) ta xavfli sayt" : "Pastdagi qadamlarni bajaring — 1 daqiqa vaqt oladi.")
+                .foregroundStyle(Flavor.hacker ? (on ? Theme.ok : Theme.warn) : Color.primary)
+            Text(Voice.statusDetail(on, domains: updater.domains))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(24)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .cardBackground()
     }
 
     private var database: some View {
-        Card(icon: "externaldrive.badge.checkmark", tint: .blue, title: "Xavfli saytlar bazasi") {
+        Card(icon: "externaldrive.badge.checkmark", tint: Theme.accent, title: Voice.database) {
             VStack(alignment: .leading, spacing: 8) {
                 if let updated = updater.updated {
                     Text("\(updater.domains.formatted()) ta domen · \(updated.formatted(.relative(presentation: .named)))")
@@ -74,7 +81,7 @@ struct ProtectionView: View {
                     Text("Hali yuklanmagan. Hozircha ichki qoidalar ishlaydi (soxta Payme, Click, bank saytlari).")
                 }
                 if updater.failed {
-                    Text("Yangilab bo'lmadi — internetni tekshiring.").foregroundStyle(.orange)
+                    Text("Yangilab bo'lmadi — internetni tekshiring.").foregroundStyle(Theme.warn)
                 }
                 Text("URLhaus + phishing ro'yxatlari. Havola tekshiruvi bazani kuniga bir marta o'zi yangilaydi; Safari va SMS filtridagi baza ilovani qayta o'rnatganingizda (7 kunda bir) yangilanadi. Siz kirgan saytlar hech qayerga yuborilmaydi.")
                     .font(.footnote)
@@ -84,7 +91,7 @@ struct ProtectionView: View {
                     if updater.running {
                         ProgressView().frame(maxWidth: .infinity)
                     } else {
-                        Text("Hozir yangilash").frame(maxWidth: .infinity)
+                        Text(Voice.update).frame(maxWidth: .infinity)
                     }
                 }
                 .buttonStyle(.bordered)

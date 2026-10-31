@@ -92,26 +92,29 @@ struct SecurityView: View {
                         HStack(alignment: .top, spacing: 14) {
                             Image(systemName: item.ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                                 .font(.title2)
-                                .foregroundStyle(item.ok ? Color.green : Color.orange)
+                                .foregroundStyle(item.ok ? Theme.ok : Theme.warn)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.title).font(.headline)
                                 Text(item.detail).font(.subheadline).foregroundStyle(.secondary)
                             }
                         }
                         .padding(.vertical, 4)
+                        .listRowBackground(Theme.card)
                         .staggerIn(i)
                     }
                 } footer: {
-                    Text("Pastga torting — qayta tekshiriladi.")
+                    Text(Voice.auditFooter)
                 }
 
-                Section("O'zingiz tekshiring") {
+                Section(Voice.manualChecks) {
                     tip("Profillar", "Sozlamalar → Umumiy → VPN va qurilmani boshqarish. Siz o'rnatmagan profil bo'lsa — o'chiring: firibgarlar u orqali trafikni kuzatadi.")
                     tip("Apple ID", "Ikki bosqichli tasdiqlash yoqilgan bo'lsin. Apple hech qachon SMS'da havola yuborib parol so'ramaydi.")
                     tip("Ilovalar", "Ilovani faqat App Store'dan o'rnating. \"Ishonchli dasturchi\" deb profil o'rnatishni so'rashsa — bu firibgarlik.")
                 }
             }
-            .navigationTitle("Xavfsizlik")
+            .scrollContentBackground(Flavor.hacker ? .hidden : .automatic)
+            .background(Theme.background)
+            .navigationTitle(Voice.auditTitle)
             .task { items = await SecurityCheck.run() }
             .refreshable { items = await SecurityCheck.run() }
         }
@@ -123,5 +126,6 @@ struct SecurityView: View {
             Text(text).font(.subheadline).foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
+        .listRowBackground(Theme.card)
     }
 }

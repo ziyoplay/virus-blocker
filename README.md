@@ -140,6 +140,8 @@ Tahlil internetsiz Android emulyatorida o'tkazilgan.
 
 ## iPhone versiyasi
 
+Android'dagi kabi ikki versiya: **QO'RIQCHI** (hacker — qora terminal, neon-yashil) va **Qo'riqchi** (oila — sokin, oddiy til). Ikkalasini bitta iPhone'ga yonma-yon o'rnatish mumkin. iOS 17 va yangisi kerak.
+
 iOS boshqa ilovalarni ko'rish, skanerlash yoki o'chirishga hech bir ilovaga ruxsat bermaydi, iPhone APK ham o'rnatmaydi. Shuning uchun iPhone versiyasi antivirus emas — **firibgar saytlardan himoya va xavfsizlik tekshiruvi**:
 
 - **Safari bloklovchi** — Android'dagi xavfli saytlar bazasi (~140 ming domen; Safari bitta kengaytmada ~150 mingtagacha qoida oladi) va soxta Payme/Click/bank/Apple ID saytlari uchun qoidalar. Bunday sayt Safari'da umuman ochilmaydi.
@@ -151,7 +153,7 @@ Telegram'ning ichki brauzerini iOS tekshirishga ruxsat bermaydi: Telegram'da hav
 
 **O'rnatish (Mac'siz, Windows'dan):**
 
-1. [Actions](../../actions/workflows/ios.yml) → oxirgi muvaffaqiyatli yig'ish → `Qoriqchi-ipa` faylini yuklab oling.
+1. [Actions](../../actions/workflows/ios.yml) → oxirgi muvaffaqiyatli yig'ish → `Qoriqchi-ipa` arxivini yuklab oling: ichida `Qoriqchi-hacker.ipa` va `Qoriqchi-family.ipa`.
 2. Kompyuterga [iTunes](https://www.apple.com/itunes/) (Microsoft Store'dagisi emas) va [Impactor](https://github.com/claration/impactor/releases) (2.7.0 yoki yangisi — eskilarida Apple ID'ga kirishda `-80045` xatosi chiqadi) ni o'rnating.
 3. iPhone'ni kabel bilan ulang, "Bu kompyuterga ishonasizmi?" → Ishonish. Impactor'da Apple ID bilan kiring, IPA'ni tashlang → Install.
 4. iPhone'da: **Sozlamalar → Maxfiylik va xavfsizlik → Dasturchi rejimi** → yoqing (telefon qayta yonadi). So'ng **Sozlamalar → Umumiy → VPN va qurilmani boshqarish** → Apple ID'ingizga ishoning.

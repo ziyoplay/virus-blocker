@@ -9,6 +9,7 @@ MessageFilter/MessageFilter.entitlements
 
 Generated/
 build/
+build-*/
 Payload/
 *.ipa
 Core/.build/

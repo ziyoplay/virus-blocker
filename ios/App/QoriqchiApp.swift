@@ -7,13 +7,14 @@ struct QoriqchiApp: App {
 
     init() {
         BlocklistSync.registerBackgroundTask()
+        Theme.configureAppearance()
     }
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(updater)
-                .tint(.blue)
+                .flavorStyle()
                 .task { await updater.updateIfStale() }
         }
         .onChange(of: phase) { p in
@@ -29,19 +30,27 @@ struct RootView: View {
         ZStack {
             TabView {
                 ProtectionView()
-                    .tabItem { Label("Himoya", systemImage: "shield.lefthalf.filled") }
+                    .tabItem { Label(Voice.tabProtection, systemImage: "shield.lefthalf.filled") }
                 LinkCheckView()
-                    .tabItem { Label("Havola", systemImage: "link") }
+                    .tabItem { Label(Voice.tabLink, systemImage: Flavor.hacker ? "terminal" : "link") }
                 SecurityView()
-                    .tabItem { Label("Tekshiruv", systemImage: "checklist") }
+                    .tabItem { Label(Voice.tabAudit, systemImage: "checklist") }
             }
             if showIntro {
-                IntroView {
-                    withAnimation(.easeOut(duration: 0.35)) { showIntro = false }
+                Group {
+                    if Flavor.hacker {
+                        TerminalIntroView(onDone: hideIntro)
+                    } else {
+                        IntroView(onDone: hideIntro)
+                    }
                 }
                 .transition(.opacity.combined(with: .scale(scale: 1.08)))
                 .zIndex(1)
             }
         }
+    }
+
+    private func hideIntro() {
+        withAnimation(.easeOut(duration: 0.35)) { showIntro = false }
     }
 }

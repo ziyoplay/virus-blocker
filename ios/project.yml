@@ -1,12 +1,12 @@
 # Xcode loyihasi shu fayldan yaratiladi: `xcodegen generate` (Mac'da yoki GitHub Actions'da).
 #
-# App Group ishlatilmaydi: bepul Apple ID'da Apple uni yaratishga ruxsat bermaydi. Xavfsiz saytlar bazasi
+# App Group ishlatilmaydi: bepul Apple ID'da Apple uni yaratishga ruxsat bermaydi. Xavfli saytlar bazasi
 # yig'ishdan oldin `swift run GenerateBlocklist Generated` bilan tayyorlanib, har bir qism ichiga joylanadi.
 name: Qoriqchi
 options:
   bundleIdPrefix: uz.apkqoriqchi
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
 
 packages:
   QoriqchiCore:
@@ -18,6 +18,10 @@ settings:
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
     TARGETED_DEVICE_FAMILY: "1"
+    # Versiya (CI'da buyruq qatoridan almashtiriladi): oila — standart, hacker — HACKER belgisi bilan
+    BASE_BUNDLE_ID: uz.apkqoriqchi.ios.family
+    APP_DISPLAY_NAME: "Qo'riqchi"
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon-Family
 
 targets:
   Qoriqchi:
@@ -36,7 +40,7 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: "Qo'riqchi"
+        CFBundleDisplayName: $(APP_DISPLAY_NAME)
         UILaunchScreen: {}
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
@@ -44,7 +48,7 @@ targets:
         BGTaskSchedulerPermittedIdentifiers: [uz.apkqoriqchi.ios.refresh]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: uz.apkqoriqchi.ios
+        PRODUCT_BUNDLE_IDENTIFIER: $(BASE_BUNDLE_ID)
     scheme: {}
 
   ContentBlocker:
@@ -61,13 +65,13 @@ targets:
     info:
       path: ContentBlocker/Info.plist
       properties:
-        CFBundleDisplayName: "Qo'riqchi"
+        CFBundleDisplayName: $(APP_DISPLAY_NAME)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.Safari.content-blocker
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ContentBlockerRequestHandler
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: uz.apkqoriqchi.ios.ContentBlocker
+        PRODUCT_BUNDLE_IDENTIFIER: $(BASE_BUNDLE_ID).ContentBlocker
 
   MessageFilter:
     type: app-extension
@@ -83,10 +87,10 @@ targets:
     info:
       path: MessageFilter/Info.plist
       properties:
-        CFBundleDisplayName: "Qo'riqchi"
+        CFBundleDisplayName: $(APP_DISPLAY_NAME)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.identitylookup.message-filter
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).MessageFilterExtension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: uz.apkqoriqchi.ios.MessageFilter
+        PRODUCT_BUNDLE_IDENTIFIER: $(BASE_BUNDLE_ID).MessageFilter
