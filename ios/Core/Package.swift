@@ -11,6 +11,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "QoriqchiCore"),
+        .executableTarget(name: "GenerateBlocklist", dependencies: ["QoriqchiCore"]),
         .testTarget(name: "QoriqchiCoreTests", dependencies: ["QoriqchiCore"]),
     ]
 )

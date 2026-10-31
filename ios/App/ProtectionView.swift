@@ -76,7 +76,7 @@ struct ProtectionView: View {
                 if updater.failed {
                     Text("Yangilab bo'lmadi — internetni tekshiring.").foregroundStyle(.orange)
                 }
-                Text("URLhaus + phishing ro'yxatlari, kuniga bir marta yangilanadi. Siz kirgan saytlar hech qayerga yuborilmaydi.")
+                Text("URLhaus + phishing ro'yxatlari. Havola tekshiruvi bazani kuniga bir marta o'zi yangilaydi; Safari va SMS filtridagi baza ilovani qayta o'rnatganingizda (7 kunda bir) yangilanadi. Siz kirgan saytlar hech qayerga yuborilmaydi.")
                     .font(.footnote)
                 Button {
                     Task { await updater.update() }

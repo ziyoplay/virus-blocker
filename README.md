@@ -152,11 +152,11 @@ Telegram'ning ichki brauzerini iOS tekshirishga ruxsat bermaydi: Telegram'da hav
 **O'rnatish (Mac'siz, Windows'dan):**
 
 1. [Actions](../../actions/workflows/ios.yml) → oxirgi muvaffaqiyatli yig'ish → `Qoriqchi-ipa` faylini yuklab oling.
-2. Kompyuterga [iTunes](https://www.apple.com/itunes/) (Microsoft Store'dagisi emas) va [Sideloadly](https://sideloadly.io/) ni o'rnating.
-3. iPhone'ni kabel bilan ulang, Sideloadly'ga IPA'ni tashlang va Apple ID'ingizni kiriting.
+2. Kompyuterga [iTunes](https://www.apple.com/itunes/) (Microsoft Store'dagisi emas) va [Impactor](https://github.com/claration/impactor/releases) (2.7.0 yoki yangisi — eskilarida Apple ID'ga kirishda `-80045` xatosi chiqadi) ni o'rnating.
+3. iPhone'ni kabel bilan ulang, "Bu kompyuterga ishonasizmi?" → Ishonish. Impactor'da Apple ID bilan kiring, IPA'ni tashlang → Install.
 4. iPhone'da: **Sozlamalar → Maxfiylik va xavfsizlik → Dasturchi rejimi** → yoqing (telefon qayta yonadi). So'ng **Sozlamalar → Umumiy → VPN va qurilmani boshqarish** → Apple ID'ingizga ishoning.
 
-Bepul Apple ID bilan ilova 7 kun ishlaydi, keyin Sideloadly orqali qayta o'rnatiladi.
+Bepul Apple ID bilan ilova 7 kun ishlaydi, keyin qayta o'rnatiladi. Bepul akkauntda Apple App Group yaratishga ruxsat bermaydi, shuning uchun Safari bloklovchi va SMS filtri bazani o'z ichida olib yuradi: IPA har kuni yangi baza bilan qayta yig'iladi va har qayta o'rnatishda yangilanadi. Havola tekshiruvi esa bazani kuniga bir marta o'zi yangilaydi.
 
 Kod: `ios/` — umumiy mantiq `ios/Core` (Swift paket, testlari `swift test` bilan), ilova SwiftUI'da, Xcode loyihasi `ios/project.yml`dan [XcodeGen](https://github.com/yonaskolb/XcodeGen) bilan yaratiladi.
 

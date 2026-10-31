@@ -1,4 +1,7 @@
 # Xcode loyihasi shu fayldan yaratiladi: `xcodegen generate` (Mac'da yoki GitHub Actions'da).
+#
+# App Group ishlatilmaydi: bepul Apple ID'da Apple uni yaratishga ruxsat bermaydi. Xavfsiz saytlar bazasi
+# yig'ishdan oldin `swift run GenerateBlocklist Generated` bilan tayyorlanib, har bir qism ichiga joylanadi.
 name: Qoriqchi
 options:
   bundleIdPrefix: uz.apkqoriqchi
@@ -20,7 +23,12 @@ targets:
   Qoriqchi:
     type: application
     platform: iOS
-    sources: [App]
+    sources:
+      - App
+      - path: Generated
+        optional: true
+        buildPhase: resources
+        includes: ["*.bin"]
     dependencies:
       - package: QoriqchiCore
       - target: ContentBlocker
@@ -30,13 +38,10 @@ targets:
       properties:
         CFBundleDisplayName: "Qo'riqchi"
         UILaunchScreen: {}
+        UIRequiresFullScreen: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [uz.apkqoriqchi.ios.refresh]
-    entitlements:
-      path: App/App.entitlements
-      properties:
-        com.apple.security.application-groups: [group.uz.apkqoriqchi.ios]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uz.apkqoriqchi.ios
@@ -45,7 +50,12 @@ targets:
   ContentBlocker:
     type: app-extension
     platform: iOS
-    sources: [ContentBlocker]
+    sources:
+      - ContentBlocker
+      - path: Generated
+        optional: true
+        buildPhase: resources
+        includes: ["blockerList.json"]
     dependencies:
       - package: QoriqchiCore
     info:
@@ -55,10 +65,6 @@ targets:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.Safari.content-blocker
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ContentBlockerRequestHandler
-    entitlements:
-      path: ContentBlocker/ContentBlocker.entitlements
-      properties:
-        com.apple.security.application-groups: [group.uz.apkqoriqchi.ios]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uz.apkqoriqchi.ios.ContentBlocker
@@ -66,7 +72,12 @@ targets:
   MessageFilter:
     type: app-extension
     platform: iOS
-    sources: [MessageFilter]
+    sources:
+      - MessageFilter
+      - path: Generated
+        optional: true
+        buildPhase: resources
+        includes: ["*.bin"]
     dependencies:
       - package: QoriqchiCore
     info:
@@ -76,10 +87,6 @@ targets:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.identitylookup.message-filter
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).MessageFilterExtension
-    entitlements:
-      path: MessageFilter/MessageFilter.entitlements
-      properties:
-        com.apple.security.application-groups: [group.uz.apkqoriqchi.ios]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uz.apkqoriqchi.ios.MessageFilter

@@ -5,6 +5,9 @@ on:
     paths: ["ios/**", ".github/workflows/ios.yml"]
   pull_request:
     paths: ["ios/**", ".github/workflows/ios.yml"]
+  # Har kuni: Safari bloklovchi va SMS filtri bazasi IPA ichida, shuning uchun uni yangi bazali qilib qayta yig'amiz.
+  schedule:
+    - cron: "0 3 * * *"
   workflow_dispatch:
 
 jobs:
@@ -16,9 +19,12 @@ jobs:
       - name: Umumiy mantiq testlari (qoidalar, baza)
         run: swift test --package-path ios/Core
 
+      - name: Xavfli saytlar bazasini tayyorlash
+        run: swift run --package-path ios/Core GenerateBlocklist "$PWD/ios/Generated"
+
       - name: Xcode loyihasini yaratish
         run: |
-          brew install xcodegen ldid
+          brew install xcodegen
           cd ios && xcodegen generate
 
       - name: Yig'ish (imzosiz)
@@ -28,17 +34,13 @@ jobs:
             -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
 
-      # Sideloadly / AltStore IPA'ni o'z Apple ID'ingiz bilan qayta imzolaydi. Entitlements (App Group)
-      # yo'qolmasligi uchun ularni ldid bilan oldindan yozib qo'yamiz.
+      # Imzosiz IPA: Impactor / Sideloadly uni o'z Apple ID'ingiz bilan imzolaydi.
       - name: IPA
         run: |
           cd ios
           rm -rf Payload && mkdir Payload
           cp -R build/Build/Products/Release-iphoneos/Qoriqchi.app Payload/
-          APP=Payload/Qoriqchi.app
-          ldid -SContentBlocker/ContentBlocker.entitlements "$APP/PlugIns/ContentBlocker.appex/ContentBlocker"
-          ldid -SMessageFilter/MessageFilter.entitlements "$APP/PlugIns/MessageFilter.appex/MessageFilter"
-          ldid -SApp/App.entitlements "$APP/Qoriqchi"
+          ls -la Payload/Qoriqchi.app/PlugIns/*/ | grep -E "blockerList|\.bin"
           zip -qry Qoriqchi.ipa Payload
 
       - uses: actions/upload-artifact@v4
